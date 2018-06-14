@@ -103,7 +103,7 @@ let main argv =
 (*    let t = RandomTerms.random_term (System.Random()) typeof<int->int->int> 3
     printfn "%A" t*)
     let closure = Utils.closure 31 scheme
-    let term_size = 44
+    let term_size = 10
     let population_size = 200
     let generations = 1000
     let bests = 10

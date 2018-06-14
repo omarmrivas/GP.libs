@@ -39,7 +39,7 @@ let scheme =
 [<EntryPoint>]
 let main argv =
     let closure = Utils.closure 20 scheme
-    let term_size = 15
+    let term_size = 10
     let population_size = 100
     let generations = 1000
     let bests = 5

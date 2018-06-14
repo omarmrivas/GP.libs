@@ -43,7 +43,8 @@ let memoize fn =
 
 let get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed scheme =
     let tcount (var:Var) = 
-            [| 1 .. term_size |]
+            let args = (List.length << fst << strip_type) var.Type
+            [| 1 .. args + term_size |]
                 |> Array.map (fun i -> (i, RandomTerms.count_terms var.Type i))
                 |> Array.filter (fun (_, c) -> c > bigint.Zero)
                 |> (fun L -> printfn "Var: %A, counts: %A" var.Name L
