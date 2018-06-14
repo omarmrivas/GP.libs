@@ -6,6 +6,7 @@ open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
 
 open DataTypes
+open Approximation
 open Graph
 open Algebra
 
@@ -58,24 +59,24 @@ let scheme =
          let rec x n : vector3D = 
                        if n <= 0
                        then V (one, zero, zero)
-                       else Mx (n-1) zero one two three
-                               div mul sin cos sinh cosh log exp
+                       else Mx (n-1) zero one two three pi e
+                               add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
                                v_add v_sub dot cross v_norm
                                identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
          and y n : vector3D = 
                        if n <= 0
                        then V (zero, one, zero)
-                       else My (n-1) zero one two three
-                               div mul sin cos sinh cosh log exp
+                       else My (n-1) zero one two three pi e
+                               add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
                                v_add v_sub dot cross v_norm 
                                identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
          and z n : vector3D =
                        if n <= 0
                        then V (zero, zero, one)
-                       else Mz (n-1) zero one two three
-                               div mul sin cos sinh cosh log exp
+                       else Mz (n-1) zero one two three pi e
+                               add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
                                v_add v_sub dot cross v_norm
                                identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
@@ -84,13 +85,13 @@ let scheme =
                     |> List.map (fun i -> let xi = x i
                                           let yi = y i
                                           let zi = z i
-                                          let cx = Gx zero one two three
-                                                      div mul sin cos sinh cosh log exp
+                                          let cx = Gx zero one two three pi e
+                                                      add sub div mul sin cos sinh cosh log exp msqrt mpow
                                                       mk_vector3D mk_matrix
                                                       v_add v_sub dot cross v_norm
                                                       identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det xi yi zi
-                                          let cy = Gy zero one two three
-                                                      div mul sin cos sinh cosh log exp
+                                          let cy = Gy zero one two three pi e
+                                                      add sub div mul sin cos sinh cosh log exp msqrt mpow
                                                       mk_vector3D mk_matrix
                                                       v_add v_sub dot cross v_norm
                                                       identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det xi yi zi

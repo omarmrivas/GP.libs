@@ -2,6 +2,7 @@
 
 open System
 open DataTypes
+open Approximation
 
 [<Serializable>]
 type PlanarGraph =

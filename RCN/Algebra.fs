@@ -1,6 +1,7 @@
 module Algebra
 
 open DataTypes
+open Approximation
 
 let div x y : base_type =
     if y = zero
@@ -8,6 +9,10 @@ let div x y : base_type =
     else x / y
 
 let mul x y : base_type = x * y
+
+let add x y : base_type = x + y
+
+let sub x y : base_type = x - y
 
 let mk_vector3D x y z : vector3D = V (x,y,z)
 

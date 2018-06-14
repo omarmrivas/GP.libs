@@ -69,6 +69,7 @@ let next_digit Ln L =
     fld 0 L 0.0*)
 
 let weightRnd_double (rnd : Random) (L : ('a * double) []) =
+    let L = Array.map (fun (a, w) -> (a, w + 0.01)) L
     let choosen = rnd.NextDouble() * Array.sumBy (fun (_, w) -> w) L
     let rec fld indx (L : ('a * double) []) i =
         if indx < Array.length L

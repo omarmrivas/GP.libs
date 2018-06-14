@@ -80,12 +80,15 @@ let mk_individual (proto : proto_individual) : individual =
 let initial_population (data : gp_data) =
     data.par_data
         |> pmap (fun (rnd,count_term) ->
+                let timer = new System.Diagnostics.Stopwatch()
+                timer.Start()
                 data.vars |> List.map2 (fun count var -> (count, var)) data.term_count
                           |> List.choose (fun (count, var : Var) -> 
                             count |> weightRnd_bigint rnd
                                   |> RandomTerms.random_term (rnd,count_term) var.Type)
                           |> mk_proto_individual data
-                          |> mk_individual)
+                          |> mk_individual
+                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
 
 let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
     let (_, ty, q) =
@@ -156,6 +159,8 @@ let Crossover (rnd : System.Random) data i i' =
 let gp (data : gp_data) : individual option =
     let rest_size = data.population_size - data.bests
     let next_generation data pool =
+        let timer = new System.Diagnostics.Stopwatch()
+        timer.Start()
         let pool = Array.sortBy (fun i -> -i.fitness) pool
         printfn "Best individual: %f" pool.[0].fitness
         let bests = Array.take data.bests pool
@@ -169,6 +174,7 @@ let gp (data : gp_data) : individual option =
                                                   |> Mutation (rnd,count_term) data
                                 i |> mk_proto_individual data
                                   |> mk_individual)
+        printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)
         Array.append bests rest
     let rec loop i pool =
         printfn "Generation: %i" i
