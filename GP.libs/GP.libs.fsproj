@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="RandomBigInteger.fs" />
+    <Compile Include="Name.fsi" />
+    <Compile Include="Name.fs" />
+    <Compile Include="Utils.fsi" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="RandomTerms.fsi" />
+    <Compile Include="RandomTerms.fs" />
+    <Compile Include="GP_hol.fsi" />
+    <Compile Include="GP_hol.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Unquote" Version="4.0.0" />
+  </ItemGroup>
+</Project>
