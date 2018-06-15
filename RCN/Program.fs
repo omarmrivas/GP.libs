@@ -59,7 +59,7 @@ let scheme =
          let rec x n : vector3D = 
                        if n <= 0
                        then V (one, zero, zero)
-                       else Mx (n-1) zero one two three pi e
+                       else Mx (n-1) to_base zero one two three pi e
                                add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
                                v_add v_sub dot cross v_norm
@@ -67,7 +67,7 @@ let scheme =
          and y n : vector3D = 
                        if n <= 0
                        then V (zero, one, zero)
-                       else My (n-1) zero one two three pi e
+                       else My (n-1) to_base zero one two three pi e
                                add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
                                v_add v_sub dot cross v_norm 
@@ -75,7 +75,7 @@ let scheme =
          and z n : vector3D =
                        if n <= 0
                        then V (zero, zero, one)
-                       else Mz (n-1) zero one two three pi e
+                       else Mz (n-1) to_base zero one two three pi e
                                add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
                                v_add v_sub dot cross v_norm
@@ -85,12 +85,12 @@ let scheme =
                     |> List.map (fun i -> let xi = x i
                                           let yi = y i
                                           let zi = z i
-                                          let cx = Gx zero one two three pi e
+                                          let cx = Gx i to_base zero one two three pi e
                                                       add sub div mul sin cos sinh cosh log exp msqrt mpow
                                                       mk_vector3D mk_matrix
                                                       v_add v_sub dot cross v_norm
                                                       identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det xi yi zi
-                                          let cy = Gy zero one two three pi e
+                                          let cy = Gy i to_base zero one two three pi e
                                                       add sub div mul sin cos sinh cosh log exp msqrt mpow
                                                       mk_vector3D mk_matrix
                                                       v_add v_sub dot cross v_norm
@@ -103,15 +103,15 @@ let scheme =
 let main argv =
 (*    let t = RandomTerms.random_term (System.Random()) typeof<int->int->int> 3
     printfn "%A" t*)
-    let closure = Utils.closure 31 scheme
+    let closure = Utils.closure 6 scheme
     let term_size = 10
     let population_size = 200
     let generations = 1000
     let bests = 10
     let mutation_prob = 0.25
     let finish fit = best_fitness = fit
-    let timeOut = 60000 // 1 minute
-    let seed = System.DateTime().Millisecond
+    let timeOut = 120000 // 2 minute
+    let seed = 0//System.DateTime().Millisecond
     let data = GP_hol.get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed closure
     match GP_hol.gp data with
         | Some i -> printfn "Solution: %A" i

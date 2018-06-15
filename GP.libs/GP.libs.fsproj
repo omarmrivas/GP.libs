@@ -3,6 +3,8 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="pseq.fsi" />
+    <Compile Include="pseq.fs" />
     <Compile Include="RandomBigInteger.fs" />
     <Compile Include="Name.fsi" />
     <Compile Include="Name.fs" />

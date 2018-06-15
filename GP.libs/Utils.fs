@@ -5,6 +5,7 @@ open System.Threading
 open System.Threading.Tasks
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
+open FSharp.Collections.ParallelSeq
 open RandomBigInteger
 
 (* Generic utilities *)
@@ -12,7 +13,31 @@ open RandomBigInteger
 let tap f x = f x |> ignore
               x
 
-let pmap f xs = Array.Parallel.map f xs
+(*let pmap f xs =
+        let l = 100.0 / ((float << Array.length) xs)
+        let mutable c = 0.0
+        let f' x = let r = f x
+                   c <- c + 1.0
+                   Console.SetCursorPosition(0, Console.CursorTop)
+                   printf "%.3f%%" (c * l)
+                   r
+        xs |> Array.toSeq
+           |> PSeq.map f'
+           |> PSeq.toArray
+           |> tap (fun _ -> printfn "")*)
+
+let pmap f xs =
+        let l = 100.0 / ((float << Array.length) xs)
+        let mutable c = 0.0
+        let f' x = let r = f x
+                   c <- c + 1.0
+                   Console.SetCursorPosition(0, Console.CursorTop)
+                   printf "%.3f%%" (c * l)
+                   r
+        xs |> Array.map f'
+           |> tap (fun _ -> printfn "")
+
+//let pmap f xs = Array.Parallel.map f xs
 (*    xs |> Array.chunkBySize System.Environment.ProcessorCount
        |> Array.map (Array.Parallel.map f)
        |> Array.concat*)
@@ -25,8 +50,9 @@ let timeout time def f v =
         let token = tokenSource.Token
         let task = Task.Factory.StartNew(fun () -> f v, token)
         if not (task.Wait(time, token))
-        then def
-        else (fun (x, y) -> x) task.Result
+        then printfn "Timeout..."
+             def
+        else fst task.Result
     with e -> def
 
 (* canonical operations *)
@@ -140,6 +166,14 @@ let rec var_lookup l (key':Var) =
 // Substitute new for free occurrences of old in a term
 let subst pairs (s:Expr) =
     s.Substitute (var_lookup pairs)
+
+(*let rec subst pairs = function
+    | Lambda (v, s) -> Expr.Lambda (v, subst pairs s)
+    | Application (p, q) -> Expr.Application (subst pairs p, subst pairs q)
+    | Var v -> match var_lookup pairs v with
+                | Some expr -> expr
+                | None -> Expr.Var v
+    | t -> t*)
 
 let clone_expr t =
     let rec clone pairs s =

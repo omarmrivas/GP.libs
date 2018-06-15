@@ -50,7 +50,8 @@ let get_gp_data term_size population_size generations bests mutation_prob finish
                 |> (fun L -> printfn "Var: %A, counts: %A" var.Name L
                              L)
     let par_data = [| 1 .. population_size |]
-                        |> Array.map (fun i -> (System.Random(i + seed), memoize (fun (A,env,s) -> RandomTerms.count_term' A env s)))
+                        |> Array.map (fun i -> (Random(i + seed), RandomTerms.count_term))
+//                        |> Array.map (fun i -> (Random(i + seed), memoize (fun (A,env,s) -> RandomTerms.count_term' A env s)))
     let vars = lambdas scheme
     {scheme = scheme
      vars = vars
@@ -67,28 +68,31 @@ let get_gp_data term_size population_size generations bests mutation_prob finish
 let mk_proto_individual (data : gp_data) lams : proto_individual =
     let norm = Expr.Applications(data.scheme, List.map List.singleton lams)
                 |> expand Map.empty
+    printfn "mk_proto_individual: %s" (Swensen.Unquote.Operators.decompile norm)
     {genome = lams
      norm = norm
+//     fitness = Swensen.Unquote.Operators.evalRaw norm}
      fitness = timeout data.timeout (fun () -> 0.0) (fun () -> Swensen.Unquote.Operators.evalRaw norm) ()}
 
 let mk_individual (proto : proto_individual) : individual =
+    printfn "mk_individual"
     {genome = proto.genome
     // needs beta-eta contraction
      norm = proto.norm
-     fitness = proto.fitness ()}
+     fitness = proto.fitness ()} |> tap (fun _ -> printfn "Done")
 
 let initial_population (data : gp_data) =
     data.par_data
         |> pmap (fun (rnd,count_term) ->
-                let timer = new System.Diagnostics.Stopwatch()
-                timer.Start()
+                (*let timer = new System.Diagnostics.Stopwatch()
+                timer.Start()*)
                 data.vars |> List.map2 (fun count var -> (count, var)) data.term_count
                           |> List.choose (fun (count, var : Var) -> 
                             count |> weightRnd_bigint rnd
                                   |> RandomTerms.random_term (rnd,count_term) var.Type)
                           |> mk_proto_individual data
-                          |> mk_individual
-                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
+                          |> mk_individual)
+//                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
 
 let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
     let (_, ty, q) =
@@ -100,7 +104,8 @@ let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
                    |> List.rev
     let target_typ = bounds |> List.map (fun var -> var.Type)
                             |> (fun typs -> typs ---> ty)
-    let term_count = [|1 .. data.term_size|]
+    let args = (List.length << fst << strip_type) target_typ
+    let term_count = [|1 .. args + data.term_size|]
                         |> Array.map (fun i -> (i, RandomTerms.count_terms target_typ i))
                         |> Array.filter (fun (_, c) -> c > bigint.Zero)
     let s = term_count |> weightRnd_bigint rnd
@@ -163,6 +168,7 @@ let gp (data : gp_data) : individual option =
         timer.Start()
         let pool = Array.sortBy (fun i -> -i.fitness) pool
         printfn "Best individual: %f" pool.[0].fitness
+        printfn "Unquoted: %s" (Swensen.Unquote.Operators.decompile pool.[0].norm)
         let bests = Array.take data.bests pool
         let pool' = Array.map (fun i -> (i, i.fitness)) pool
         let rest = data.par_data
@@ -170,11 +176,15 @@ let gp (data : gp_data) : individual option =
                         |> pmap (fun (rnd,count_term) ->
                                 let i1 = weightRnd_double rnd pool'
                                 let i2 = weightRnd_double rnd pool'
-                                let i = i2.genome |> Crossover rnd data i1.genome
+                                let i = i2.genome |> tap (fun _ -> printfn "Starting crossover")
+                                                  |> Crossover rnd data i1.genome
+                                                  |> tap (fun _ -> printfn "Starting Mutation")
                                                   |> Mutation (rnd,count_term) data
+                                                  |> tap (fun _ -> printfn "ready...")
                                 i |> mk_proto_individual data
                                   |> mk_individual)
-        printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)
+        printfn ""
+        printfn "Elapsed Time: %i sec" (timer.ElapsedMilliseconds / 1000L)
         Array.append bests rest
     let rec loop i pool =
         printfn "Generation: %i" i
