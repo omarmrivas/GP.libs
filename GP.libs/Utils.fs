@@ -13,7 +13,7 @@ open RandomBigInteger
 let tap f x = f x |> ignore
               x
 
-(*let pmap f xs =
+let pmap f xs =
         let l = 100.0 / ((float << Array.length) xs)
         let mutable c = 0.0
         let f' x = let r = f x
@@ -24,9 +24,9 @@ let tap f x = f x |> ignore
         xs |> Array.toSeq
            |> PSeq.map f'
            |> PSeq.toArray
-           |> tap (fun _ -> printfn "")*)
+           |> tap (fun _ -> printfn "")
 
-let pmap f xs =
+(*let pmap f xs =
         let l = 100.0 / ((float << Array.length) xs)
         let mutable c = 0.0
         let f' x = let r = f x
@@ -35,7 +35,7 @@ let pmap f xs =
                    printf "%.3f%%" (c * l)
                    r
         xs |> Array.map f'
-           |> tap (fun _ -> printfn "")
+           |> tap (fun _ -> printfn "")*)
 
 //let pmap f xs = Array.Parallel.map f xs
 (*    xs |> Array.chunkBySize System.Environment.ProcessorCount
@@ -94,18 +94,6 @@ let next_digit Ln L =
         else fld (indx + 1) L i
     fld 0 L 0.0*)
 
-let weightRnd_double (rnd : Random) (L : ('a * double) []) =
-    let L = Array.map (fun (a, w) -> (a, w + 0.01)) L
-    let choosen = rnd.NextDouble() * Array.sumBy (fun (_, w) -> w) L
-    let rec fld indx (L : ('a * double) []) i =
-        if indx < Array.length L
-        then let (x, w) = L.[indx]
-             let i = i + w
-             if choosen < i then x
-             else fld (indx + 1) L i
-        else fst L.[0]
-    fld 0 L 0.0
-
 let weightRnd_int (rnd : Random) (L : ('a * int) []) =
     let choosen = rnd.Next (Array.sumBy (fun (_, w) -> w) L)
     let rec fld indx (L : ('a * int) []) i =
@@ -114,6 +102,28 @@ let weightRnd_int (rnd : Random) (L : ('a * int) []) =
         if choosen < i then x
         else fld (indx + 1) L i
     fld 0 L 0
+
+let weightRnd_double (rnd : Random) (L : ('a * double) []) =
+    try 
+        let L = Array.map (fun (a, w) -> (a, w + 0.01)) L
+        let choosen = rnd.NextDouble() * Array.sumBy (fun (_, w) -> w) L
+        let rec fld indx (L : ('a * double) []) i =
+            if indx < Array.length L
+            then let (x, w) = L.[indx]
+                 let i = i + w
+                 if choosen < i then x
+                 else fld (indx + 1) L i
+            else fst L.[0]
+        fld 0 L 0.0
+    with | :? System.AggregateException -> L |> Array.map (fun x -> (x, 1))
+                                             |> weightRnd_int rnd
+                                             |> fst
+         | :? System.OverflowException -> L |> Array.map (fun x -> (x, 1))
+                                            |> weightRnd_int rnd
+                                            |> fst
+         | genericException -> L |> Array.map (fun x -> (x, 1))
+                                 |> weightRnd_int rnd
+                                 |> fst
 
 let weightRnd_bigint (rnd : Random) (L : ('a * bigint) []) =
 //    let choosen = NextBigInteger rnd (bigint.Zero, Array.sumBy (fun (_, w) -> w) L)

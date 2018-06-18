@@ -39,14 +39,18 @@ let lower_bound =
      29, 8421
      30, 9726*)]
 
-let fitness f = 
-        List.sumBy (fun (n, cn) -> 
+let fitness f =
+        try
+            List.sumBy (fun (n, cn) ->
                         match f n with
                             Some g -> let cn' = g.crossing_number
                                       let wc = List.length g.quadrilaterals
                                       let x = double (wc - cn')
                                       x * x
-                          | None -> 0.0) lower_bound
+                          | None -> 0.5) lower_bound
+        with | :? System.AggregateException -> 0.0
+             | :? System.OverflowException -> 0.0
+             | genericException -> 0.0
 
 let best_fitness =
     List.sumBy (fun (n, cn) -> let wc = binomialCoefficient n 4

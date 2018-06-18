@@ -50,8 +50,8 @@ let get_gp_data term_size population_size generations bests mutation_prob finish
                 |> (fun L -> printfn "Var: %A, counts: %A" var.Name L
                              L)
     let par_data = [| 1 .. population_size |]
-                        |> Array.map (fun i -> (Random(i + seed), RandomTerms.count_term))
-//                        |> Array.map (fun i -> (Random(i + seed), memoize (fun (A,env,s) -> RandomTerms.count_term' A env s)))
+//                        |> Array.map (fun i -> (Random(i + seed), RandomTerms.count_term))
+                        |> Array.map (fun i -> (Random(i + seed), memoize (fun (A,env,s) -> RandomTerms.count_term' A env s)))
     let vars = lambdas scheme
     {scheme = scheme
      vars = vars
@@ -68,30 +68,39 @@ let get_gp_data term_size population_size generations bests mutation_prob finish
 let mk_proto_individual (data : gp_data) lams : proto_individual =
     let norm = Expr.Applications(data.scheme, List.map List.singleton lams)
                 |> expand Map.empty
-    printfn "mk_proto_individual: %s" (Swensen.Unquote.Operators.decompile norm)
+    //printfn "mk_proto_individual: %s" (Swensen.Unquote.Operators.decompile norm)
     {genome = lams
      norm = norm
 //     fitness = Swensen.Unquote.Operators.evalRaw norm}
      fitness = timeout data.timeout (fun () -> 0.0) (fun () -> Swensen.Unquote.Operators.evalRaw norm) ()}
 
 let mk_individual (proto : proto_individual) : individual =
-    printfn "mk_individual"
+    //printfn "mk_individual"
     {genome = proto.genome
     // needs beta-eta contraction
      norm = proto.norm
-     fitness = proto.fitness ()} |> tap (fun _ -> printfn "Done")
+     fitness = proto.fitness ()}// |> tap (fun _ -> printfn "Done")
 
 let initial_population (data : gp_data) =
     data.par_data
-        |> pmap (fun (rnd,count_term) ->
+        |> Array.mapi (fun i x -> (i, x))
+        |> pmap (fun (i, (rnd,count_term)) ->
                 (*let timer = new System.Diagnostics.Stopwatch()
                 timer.Start()*)
-                data.vars |> List.map2 (fun count var -> (count, var)) data.term_count
-                          |> List.choose (fun (count, var : Var) -> 
-                            count |> weightRnd_bigint rnd
-                                  |> RandomTerms.random_term (rnd,count_term) var.Type)
-                          |> mk_proto_individual data
-                          |> mk_individual)
+                if i % 2 = 0
+                then data.vars |> List.map2 (fun count var -> (count, var)) data.term_count
+                               |> List.choose (fun (count, var : Var) -> 
+                                 count |> weightRnd_bigint rnd
+                                       |> RandomTerms.random_term (rnd,count_term) var.Type)
+                               |> mk_proto_individual data
+                               |> mk_individual
+                else data.vars |> List.map2 (fun count var -> (count, var)) data.term_count
+                               |> List.choose (fun (count, var : Var) -> 
+                                 count |> Array.map (fun (x, _) -> (x, 1))
+                                       |> weightRnd_int rnd
+                                       |> RandomTerms.random_term (rnd,count_term) var.Type)
+                               |> mk_proto_individual data
+                               |> mk_individual)
 //                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
 
 let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
@@ -176,11 +185,11 @@ let gp (data : gp_data) : individual option =
                         |> pmap (fun (rnd,count_term) ->
                                 let i1 = weightRnd_double rnd pool'
                                 let i2 = weightRnd_double rnd pool'
-                                let i = i2.genome |> tap (fun _ -> printfn "Starting crossover")
+                                let i = i2.genome //|> tap (fun _ -> printfn "Starting crossover")
                                                   |> Crossover rnd data i1.genome
-                                                  |> tap (fun _ -> printfn "Starting Mutation")
+                                                  //|> tap (fun _ -> printfn "Starting Mutation")
                                                   |> Mutation (rnd,count_term) data
-                                                  |> tap (fun _ -> printfn "ready...")
+                                                  //|> tap (fun _ -> printfn "ready...")
                                 i |> mk_proto_individual data
                                   |> mk_individual)
         printfn ""
