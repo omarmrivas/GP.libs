@@ -3,6 +3,12 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="DataTypes.fs" />
     <Compile Include="Approximation.fs" />
@@ -12,6 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Unquote" Version="4.0.0" />
+    <PackageReference Include="FsPickler" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="GP.libs">

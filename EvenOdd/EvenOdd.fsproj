@@ -13,7 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="GP.libs">
-      <HintPath>..\GP.libs\bin\Release\netstandard2.0\GP.libs.dll</HintPath>
+      <HintPath>..\GP.libs\bin\Debug\netstandard2.0\GP.libs.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>

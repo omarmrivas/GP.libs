@@ -7,6 +7,7 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open FSharp.Collections.ParallelSeq
 open RandomBigInteger
+open Name
 
 (* Generic utilities *)
 
@@ -54,6 +55,19 @@ let timeout time def f v =
              def
         else fst task.Result
     with e -> def
+
+(*let serialize (file : string) obj =
+    let serializer = System.Runtime.Serialization.Formatters.Binary.BinaryFormatter()
+    let stream = new System.IO.FileStream(file, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None)
+    serializer.Serialize(stream, obj)
+    stream.Close()
+
+let deserialize<'T> (file : string) =
+    let serializer = System.Runtime.Serialization.Formatters.Binary.BinaryFormatter()
+    let stream = new System.IO.FileStream(file, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read)
+    let obj = serializer.Deserialize(stream) :?> 'T
+    stream.Close()
+    obj*)
 
 (* canonical operations *)
 
@@ -194,6 +208,17 @@ let clone_expr t =
         | Var v -> Option.get (var_lookup pairs v)
         | _ -> s
     clone [] t
+
+let rename_expr n t =
+    let rec rename names vars s =
+        match s with
+        | Lambda (v, s) -> let name = get_fresh_name names n
+                           let v' = Var (name, v.Type)
+                           Expr.Lambda (v', rename (name::names) (Map.add v.Name (Expr.Var v') vars) s)
+        | Application (p, q) -> Expr.Application (rename names vars p, rename names vars q)
+        | Var v -> Map.find v.Name vars
+        | _ -> s
+    rename [] Map.empty t
 
 // Beta-Let normalization
 // Thanks to Tomas Petricek

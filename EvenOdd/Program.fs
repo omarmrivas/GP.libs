@@ -38,6 +38,7 @@ let scheme =
 
 [<EntryPoint>]
 let main argv =
+    printfn "Starting..."
     let closure = Utils.closure 20 scheme
     let term_size = 10
     let population_size = 100
@@ -47,7 +48,8 @@ let main argv =
     let finish fit = fit = 10.0
     let timeOut = 3000
     let seed = System.DateTime().Millisecond
-    let data = GP_hol.get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed closure
+    let serializationFile = "pool.user"
+    let data = GP_hol.get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed serializationFile closure
     match GP_hol.gp data with
         | Some i -> printfn "Solution: %A" i
         | None -> printfn "oops"

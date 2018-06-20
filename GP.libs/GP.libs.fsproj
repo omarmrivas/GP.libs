@@ -2,6 +2,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="pseq.fsi" />
     <Compile Include="pseq.fs" />
@@ -12,10 +15,12 @@
     <Compile Include="Utils.fs" />
     <Compile Include="RandomTerms.fsi" />
     <Compile Include="RandomTerms.fs" />
+    <Compile Include="Serialize.fs" />
     <Compile Include="GP_hol.fsi" />
     <Compile Include="GP_hol.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Unquote" Version="4.0.0" />
+    <PackageReference Include="FsPickler" Version="4.0.1" />
   </ItemGroup>
 </Project>

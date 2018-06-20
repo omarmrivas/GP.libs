@@ -21,6 +21,10 @@ let mpow : base_type -> base_type -> base_type = fun x y -> Math.Pow(x,y)
 
 let to_base = double : int -> base_type
 
+let v_x (V (x, _, _)) = x
+let v_y (V (_, y, _)) = y
+let v_z (V (_, _, z)) = z
+
 (*open System
 open MathNet.Numerics
 open MathNet.Numerics.LinearAlgebra

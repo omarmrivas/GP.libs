@@ -10,6 +10,8 @@ open Approximation
 open Graph
 open Algebra
 
+
+
 let lower_bound =
     [4, 0
      5, 1
@@ -66,6 +68,7 @@ let scheme =
                        else Mx (n-1) to_base zero one two three pi e
                                add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
+                               v_x v_y v_z
                                v_add v_sub dot cross v_norm
                                identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
          and y n : vector3D = 
@@ -74,6 +77,7 @@ let scheme =
                        else My (n-1) to_base zero one two three pi e
                                add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
+                               v_x v_y v_z
                                v_add v_sub dot cross v_norm 
                                identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
          and z n : vector3D =
@@ -82,6 +86,7 @@ let scheme =
                        else Mz (n-1) to_base zero one two three pi e
                                add sub div mul sin cos sinh cosh log exp msqrt mpow
                                mk_vector3D mk_matrix
+                               v_x v_y v_z
                                v_add v_sub dot cross v_norm
                                identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
          and graph n = 
@@ -92,11 +97,13 @@ let scheme =
                                           let cx = Gx i to_base zero one two three pi e
                                                       add sub div mul sin cos sinh cosh log exp msqrt mpow
                                                       mk_vector3D mk_matrix
+                                                      v_x v_y v_z
                                                       v_add v_sub dot cross v_norm
                                                       identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det xi yi zi
                                           let cy = Gy i to_base zero one two three pi e
                                                       add sub div mul sin cos sinh cosh log exp msqrt mpow
                                                       mk_vector3D mk_matrix
+                                                      v_x v_y v_z
                                                       v_add v_sub dot cross v_norm
                                                       identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det xi yi zi
                                           (cx, cy) : Vertex)
@@ -105,20 +112,19 @@ let scheme =
 
 [<EntryPoint>]
 let main argv =
-(*    let t = RandomTerms.random_term (System.Random()) typeof<int->int->int> 3
-    printfn "%A" t*)
-    let closure = Utils.closure 6 scheme
-    let term_size = 10
-    let population_size = 200
-    let generations = 1000
-    let bests = 10
-    let mutation_prob = 0.25
+    let closure = Utils.closure 10 scheme
+    let term_size = 7
+    let population_size = 1000
+    let generations = 10000
+    let bests = 20
+    let mutation_prob = 0.05
     let finish fit = best_fitness = fit
     let timeOut = 120000 // 2 minute
     let seed = 0//System.DateTime().Millisecond
-    let data = GP_hol.get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed closure
+    let serializationFile = "pool.user"
+    let data = GP_hol.get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed serializationFile closure
     match GP_hol.gp data with
-        | Some i -> printfn "Solution: %A" i
+        | Some i -> printfn "Solution: %s" (Swensen.Unquote.Operators.decompile i.norm)
         | None -> printfn "oops"
     0 // return an integer exit code
         

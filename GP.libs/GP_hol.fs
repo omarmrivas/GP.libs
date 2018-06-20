@@ -1,10 +1,14 @@
 ﻿module GP_hol
 
 open System
+open System.IO
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
+open MBrace.FsPickler
 open Utils
+open Serialize
+
 
 type par_data = Random * (Type * (Type*bigint) list * int -> bigint)
 
@@ -19,13 +23,15 @@ type gp_data =
      finish: float -> bool
      term_count: (int * bigint) [] list
      timeout : int
-     par_data : par_data []}
+     par_data : par_data []
+     serialization_file : string}
 
 type proto_individual =
     {genome: Expr list
      norm: Expr
      fitness: unit -> float}
 
+[<Serializable>]
 type individual =
     {genome: Expr list
      norm: Expr
@@ -41,7 +47,7 @@ let memoize fn =
                   cache.[x] <- v
                   v)
 
-let get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed scheme =
+let get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed fileName scheme =
     let tcount (var:Var) = 
             let args = (List.length << fst << strip_type) var.Type
             [| 1 .. args + term_size |]
@@ -63,7 +69,8 @@ let get_gp_data term_size population_size generations bests mutation_prob finish
      finish = finish
      term_count = List.map tcount vars
      timeout = timeOut
-     par_data = par_data}
+     par_data = par_data
+     serialization_file = fileName}
 
 let mk_proto_individual (data : gp_data) lams : proto_individual =
     let norm = Expr.Applications(data.scheme, List.map List.singleton lams)
@@ -81,8 +88,30 @@ let mk_individual (proto : proto_individual) : individual =
      norm = proto.norm
      fitness = proto.fitness ()}// |> tap (fun _ -> printfn "Done")
 
+let serialize (data : gp_data) pool =
+    let binarySerializer = FsPickler.CreateBinarySerializer()
+    use fileStream = new FileStream(data.serialization_file, FileMode.Create)
+    pool |> Array.map (fun i -> ((Array.map serialize_lambda << List.toArray) i.genome, i.fitness))
+         |> (fun pool -> binarySerializer.Serialize(fileStream, pool))
+
+let deserialize (data : gp_data) =
+    printfn "Deserializing GP pool"
+    let binarySerializer = FsPickler.CreateBinarySerializer()
+    use fileStream = new FileStream(data.serialization_file, FileMode.Open)
+    binarySerializer.Deserialize<(term [] * float)[]>(fileStream)
+        |> Array.map (fun (lams, fitness) -> 
+                        let lams = (List.map (deserialize_lambda Map.empty) << Array.toList) lams
+                        let norm = Expr.Applications(data.scheme, List.map List.singleton lams)
+                                    |> expand Map.empty
+                        {genome = lams
+                         norm = norm
+                         fitness = fitness})
+
 let initial_population (data : gp_data) =
-    data.par_data
+    if File.Exists( data.serialization_file )
+    then deserialize data
+    else 
+     data.par_data
         |> Array.mapi (fun i x -> (i, x))
         |> pmap (fun (i, (rnd,count_term)) ->
                 (*let timer = new System.Diagnostics.Stopwatch()
@@ -104,6 +133,7 @@ let initial_population (data : gp_data) =
 //                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
 
 let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
+    let t = rename_expr "x" t
     let (_, ty, q) =
               t |> positions
                 |> List.map (fun p -> (p,1))
@@ -120,6 +150,7 @@ let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
     let s = term_count |> weightRnd_bigint rnd
                        |> RandomTerms.random_term (rnd,count_term) target_typ
                        |> Option.get
+                       |> rename_expr "y"
                        |> (fun lam -> Expr.Applications(lam, List.map (List.singleton << Expr.Var) bounds))
     t |> substitute (s, q)
       |> expand Map.empty
@@ -131,6 +162,8 @@ let Mutation ((rnd,count_term) : par_data) (data : gp_data) i =
     else i
 
 let crossover (rnd : System.Random) (data : gp_data) s t =
+    let s = rename_expr "x" s
+    let t = rename_expr "y" t
     let ps = positions s
     let qs = positions t
     let valid_cross_points (_, (tao:System.Type), p) =
@@ -139,11 +172,11 @@ let crossover (rnd : System.Random) (data : gp_data) s t =
            |> List.choose (fun (t_q, _, _) -> 
                     let dom = frees t_q
                     match dom with
-                        [] -> Some ((t_q, []), 1)
+                        [] -> Some ((t_q, []), bigint.One)
                        | _ -> dom |> List.map (fun v -> (v, List.filter (fun (v':Var) -> v.Type.ToString() = v'.Type.ToString()) cod))
-                                  |> List.map (fun (v, vs) -> ((v, vs), List.length vs))
-                                  |> (fun xs -> let count = List.fold (fun c (_,s) -> c*s) 1 xs
-                                                if count > 0
+                                  |> List.map (fun (v, vs) -> ((v, vs), bigint(List.length vs)))
+                                  |> (fun xs -> let count = List.fold (fun c (_,s) -> c*s) bigint.One xs
+                                                if count > bigint.Zero
                                                 then xs |> List.map fst
                                                         |> (fun xs -> Some ((t_q, xs), count))
                                                 else None))
@@ -153,9 +186,9 @@ let crossover (rnd : System.Random) (data : gp_data) s t =
     ps |> List.choose valid_cross_points
        |> List.toArray
        // choose a p
-       |> weightRnd_int rnd
+       |> weightRnd_bigint rnd
        |> (fun (p, xs) -> (p, xs |> List.toArray
-                                 |> weightRnd_int rnd))//choose a q
+                                 |> weightRnd_bigint rnd))//choose a q
        |> (fun (p, (t_q, xs)) -> (p, (t_q, List.map (fun (v, vs) -> (v, vs |> List.map (fun v' -> (v',1))
                                                                            |> List.toArray
                                                                            |> weightRnd_int rnd
@@ -197,6 +230,7 @@ let gp (data : gp_data) : individual option =
         Array.append bests rest
     let rec loop i pool =
         printfn "Generation: %i" i
+        serialize data pool
         match Array.tryFind (fun i -> data.finish i.fitness) pool with
             | Some i -> Some i
             | None -> if i < data.generations

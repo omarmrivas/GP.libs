@@ -17,6 +17,9 @@ val pmap : ('a -> 'b) -> 'a [] -> 'b []
 // non-terminating function calls
 val timeout : int -> 'a -> ('b -> 'a) -> 'b -> 'a
 
+(*val serialize : string -> 'a -> unit
+val deserialize : string -> 'a*)
+
 (* canonical operations *)
 val subtract : ('a*'b -> bool) -> ('b list -> 'a list -> 'b list)
 
@@ -36,6 +39,7 @@ val range_type  : (Type -> Type)
 
 (* Quotations *)
 val clone_expr         : Expr -> Expr
+val rename_expr        : string -> Expr -> Expr
 val lambdas            : Expr -> Var list
 val get_letrecursive   : Expr -> Var list
 val expand             : Map<Var,Expr> -> Expr -> Expr
