@@ -10,13 +10,11 @@ open Approximation
 open Graph
 open Algebra
 
-
-
 let lower_bound =
     [4, 0
      5, 1
      6, 3
-     (*7, 9
+     7, 9
      8, 19
      9, 36
      10, 62
@@ -39,28 +37,28 @@ let lower_bound =
      27, 6180
      28, 7233
      29, 8421
-     30, 9726*)]
+     30, 9726]
 
-let fitness f =
-        try
-            List.sumBy (fun (n, cn) ->
-                        match f n with
-                            Some g -> let cn' = g.crossing_number
-                                      let wc = List.length g.quadrilaterals
-                                      let x = double (wc - cn')
-                                      x * x
-                          | None -> 0.5) lower_bound
-        with | :? System.AggregateException -> 0.0
-             | :? System.OverflowException -> 0.0
-             | genericException -> 0.0
+let fitness i f =
+    try let (n, cn) = List.item i lower_bound
+        match f n with
+            Some g -> let cn' = g.crossing_number
+                      let wc = List.length g.quadrilaterals
+                      let x = double (wc - cn')
+                      x * x
+          | None -> 0.5
+    with | :? System.AggregateException -> 0.0
+         | :? System.OverflowException -> 0.0
+         | genericException -> 0.0
 
-let best_fitness =
-    List.sumBy (fun (n, cn) -> let wc = binomialCoefficient n 4
-                               let x = double (wc - cn)
-                               x * x) lower_bound
+let best_fitness i =
+    let (n, cn) = List.item i lower_bound
+    let wc = binomialCoefficient n 4
+    let x = double (wc - cn)
+    x * x
 
 // Original scheme
-let scheme =
+let scheme i =
     <@@ fun Mx My Mz Gx Gy ->
          let rec x n : vector3D = 
                        if n <= 0
@@ -108,23 +106,44 @@ let scheme =
                                                       identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det xi yi zi
                                           (cx, cy) : Vertex)
                     |> List.fold add_vertex (Some empty_graph)
-         fun () -> fitness graph @@>
+         fun () -> fitness i graph @@>
 
 [<EntryPoint>]
 let main argv =
-    let closure = Utils.closure 10 scheme
+    let closure = Utils.closure 6 (scheme 0)
     let term_size = 7
     let population_size = 1000
     let generations = 10000
     let bests = 20
-    let mutation_prob = 0.05
-    let finish fit = best_fitness = fit
-    let timeOut = 120000 // 2 minute
-    let seed = 0//System.DateTime().Millisecond
-    let serializationFile = "pool.user"
-    let data = GP_hol.get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed serializationFile closure
-    match GP_hol.gp data with
-        | Some i -> printfn "Solution: %s" (Swensen.Unquote.Operators.decompile i.norm)
-        | None -> printfn "oops"
+    let mutation_prob = 0.10
+    let finish fit = best_fitness 0 = fit
+    let timeOut = 120000 + 0 * 20 // 2 minute + 20 seconds per n (size of graph)
+    let seed = System.DateTime().Millisecond
+    let loadFile = None
+    let saveFile = "pool" + string 4 + ".save"
+    let message = sprintf "Graph (size = %d)" 4
+    let data = GP_hol.get_gp_data term_size population_size generations bests
+                                  mutation_prob finish timeOut seed
+                                  loadFile saveFile message closure
+    [0 .. List.length lower_bound - 1]
+        |> List.iter (fun i ->
+                        printfn "Using GP to obtain Graph (size = %d) with minimal RCN." (i+4)
+                        let closure = Utils.closure (6+i) (scheme i)
+                        let finish fit = best_fitness i = fit
+                        let timeOut = 120000 + i * 20 // 2 minute + 20 seconds per n (size of graph)
+                        let loadFile = if i = 0
+                                       then None
+                                       else Some ("pool" + string (i+3) + ".save")
+                        let saveFile = "pool" + string (i+4) + ".save"
+                        let message = sprintf "Graph (size = %d)" (i+4)
+                        let data = {data with scheme = closure
+                                              finish = finish
+                                              timeout = timeOut
+                                              load_file = loadFile
+                                              save_file = saveFile
+                                              message = message}
+                        match GP_hol.gp data with
+                            | Some i -> printfn "Solution: %s" (Swensen.Unquote.Operators.decompile i.norm)
+                            | None -> failwith "oops")
     0 // return an integer exit code
         

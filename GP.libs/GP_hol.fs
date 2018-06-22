@@ -24,7 +24,9 @@ type gp_data =
      term_count: (int * bigint) [] list
      timeout : int
      par_data : par_data []
-     serialization_file : string}
+     load_file : string option
+     save_file : string
+     message: string}
 
 type proto_individual =
     {genome: Expr list
@@ -37,6 +39,26 @@ type individual =
      norm: Expr
      fitness: float}
 
+let gp_data_to_string data =
+    sprintf "scheme: %s\n
+             term_size: %d\n
+             population_size: %d\n
+             generations: %d\n
+             bests: %d\n
+             mutation_prob: %.3f\n
+             timeout: %.1f sec\n
+             load_file: %A\n
+             save_file: %s\n"
+                (Swensen.Unquote.Operators.decompile data.scheme)
+                data.term_size
+                data.population_size
+                data.generations
+                data.bests
+                data.mutation_prob
+                ((float data.timeout) / 1000.0)
+                data.load_file
+                data.save_file
+
 let memoize fn =
 //  let cache = new System.Collections.Concurrent.ConcurrentDictionary<_,_>()
   let cache = new System.Collections.Generic.Dictionary<_,_>()
@@ -47,7 +69,7 @@ let memoize fn =
                   cache.[x] <- v
                   v)
 
-let get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed fileName scheme =
+let get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed loadFile saveFile message scheme =
     let tcount (var:Var) = 
             let args = (List.length << fst << strip_type) var.Type
             [| 1 .. args + term_size |]
@@ -70,7 +92,9 @@ let get_gp_data term_size population_size generations bests mutation_prob finish
      term_count = List.map tcount vars
      timeout = timeOut
      par_data = par_data
-     serialization_file = fileName}
+     load_file = loadFile
+     save_file = saveFile
+     message = message}
 
 let mk_proto_individual (data : gp_data) lams : proto_individual =
     let norm = Expr.Applications(data.scheme, List.map List.singleton lams)
@@ -90,25 +114,29 @@ let mk_individual (proto : proto_individual) : individual =
 
 let serialize (data : gp_data) pool =
     let binarySerializer = FsPickler.CreateBinarySerializer()
-    use fileStream = new FileStream(data.serialization_file, FileMode.Create)
+    use fileStream = new FileStream(data.save_file, FileMode.Create)
     pool |> Array.map (fun i -> ((Array.map serialize_lambda << List.toArray) i.genome, i.fitness))
          |> (fun pool -> binarySerializer.Serialize(fileStream, pool))
 
 let deserialize (data : gp_data) =
-    printfn "Deserializing GP pool"
-    let binarySerializer = FsPickler.CreateBinarySerializer()
-    use fileStream = new FileStream(data.serialization_file, FileMode.Open)
-    binarySerializer.Deserialize<(term [] * float)[]>(fileStream)
-        |> Array.map (fun (lams, fitness) -> 
-                        let lams = (List.map (deserialize_lambda Map.empty) << Array.toList) lams
-                        let norm = Expr.Applications(data.scheme, List.map List.singleton lams)
-                                    |> expand Map.empty
-                        {genome = lams
-                         norm = norm
-                         fitness = fitness})
+    match data.load_file with
+      | Some load_file -> 
+            printfn "Deserializing GP pool"
+            let binarySerializer = FsPickler.CreateBinarySerializer()
+            use fileStream = new FileStream(load_file, FileMode.Open)
+            binarySerializer.Deserialize<(term [] * float)[]>(fileStream)
+                |> Array.map (fun (lams, fitness) -> 
+                                let lams = (List.map (deserialize_lambda Map.empty) << Array.toList) lams
+                                let norm = Expr.Applications(data.scheme, List.map List.singleton lams)
+                                            |> expand Map.empty
+                                {genome = lams
+                                 norm = norm
+                                 fitness = fitness})
+      | None -> failwith "Can't deserialize GP pool. Load file not set."
 
 let initial_population (data : gp_data) =
-    if File.Exists( data.serialization_file )
+    if Option.isSome data.load_file &&
+       File.Exists( Option.get data.load_file )
     then deserialize data
     else 
      data.par_data
@@ -204,6 +232,7 @@ let Crossover (rnd : System.Random) data i i' =
     prefix @ (x :: suffix)
 
 let gp (data : gp_data) : individual option =
+    printfn "%s" (gp_data_to_string data)
     let rest_size = data.population_size - data.bests
     let next_generation data pool =
         let timer = new System.Diagnostics.Stopwatch()
@@ -229,6 +258,7 @@ let gp (data : gp_data) : individual option =
         printfn "Elapsed Time: %i sec" (timer.ElapsedMilliseconds / 1000L)
         Array.append bests rest
     let rec loop i pool =
+        printfn "%s" data.message
         printfn "Generation: %i" i
         serialize data pool
         match Array.tryFind (fun i -> data.finish i.fitness) pool with

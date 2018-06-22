@@ -20,7 +20,10 @@ type gp_data =
      term_count: (int * bigint) [] list
      timeout : int
      par_data : par_data []
-     serialization_file : string}
+     load_file : string option
+     save_file : string
+     message: string}
+
 
 type individual =
     {genome: Expr list
@@ -36,7 +39,9 @@ val get_gp_data :
             finish          : (float -> bool) ->
             timeOut         : int ->
             seed            : int ->
-            fileName        : string ->
+            loadFile        : string option ->
+            saveFile        : string ->
+            message         : string ->
             scheme          : Expr
                            -> gp_data
 
