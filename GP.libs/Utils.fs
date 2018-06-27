@@ -14,7 +14,7 @@ open Name
 let tap f x = f x |> ignore
               x
 
-let pmap f xs =
+(*let pmap f xs =
         let l = 100.0 / ((float << Array.length) xs)
         let mutable c = 0.0
         let f' x = let r = f x
@@ -25,7 +25,7 @@ let pmap f xs =
         xs |> Array.toSeq
            |> PSeq.map f'
            |> PSeq.toArray
-           |> tap (fun _ -> printfn "")
+           |> tap (fun _ -> printfn "")*)
 
 (*let pmap f xs =
         let l = 100.0 / ((float << Array.length) xs)
@@ -35,13 +35,48 @@ let pmap f xs =
                    Console.SetCursorPosition(0, Console.CursorTop)
                    printf "%.3f%%" (c * l)
                    r
-        xs |> Array.map f'
+        xs |> Array.Parallel.map f'
            |> tap (fun _ -> printfn "")*)
 
-//let pmap f xs = Array.Parallel.map f xs
-(*    xs |> Array.chunkBySize System.Environment.ProcessorCount
-       |> Array.map (Array.Parallel.map f)
-       |> Array.concat*)
+let pmap f xs =
+    let l = 100.0 / ((float << Array.length) xs)
+    let mutable c = 0.0
+    let f' x = let r = f x
+               c <- c + 1.0
+               Console.SetCursorPosition(0, Console.CursorTop)
+               printf "%.3f%%" (c * l)
+               r
+    xs |> Array.chunkBySize System.Environment.ProcessorCount
+       |> Array.map (Array.Parallel.map f')
+       |> Array.concat
+       |> tap (fun _ -> printfn "")
+
+(*type Async with
+    static member WithCancellation (token:CancellationToken) operation = 
+        async {
+            try
+                let task = Async.StartAsTask (operation, cancellationToken = token)
+                task.Wait ()
+                return Some task.Result
+            with 
+                | :? TaskCanceledException -> return None
+                | :? AggregateException -> return None
+        }
+
+    static member WithTimeout (timeout:int) operation = 
+        async {
+               use tokenSource = new CancellationTokenSource (timeout)
+               return! operation |> Async.WithCancellation tokenSource.Token
+        }
+
+// Not really useful as it would lead to stack overflows in
+// non-terminating function calls
+let timeout (time:int) def f v =
+    try match Async.WithTimeout time (async {return f v})
+                |> Async.RunSynchronously with
+            Some v -> v
+          | None -> def
+    with e -> def*)
 
 // Not really useful as it would lead to stack overflows in
 // non-terminating function calls
@@ -51,9 +86,8 @@ let timeout time def f v =
         let token = tokenSource.Token
         let task = Task.Factory.StartNew(fun () -> f v, token)
         if not (task.Wait(time, token))
-        then printfn "Timeout..."
-             def
-        else fst task.Result
+        then def
+        else (fun (x, y) -> x) task.Result
     with e -> def
 
 (*let serialize (file : string) obj =
@@ -384,3 +418,24 @@ let closure (max_calls : int) scheme =
                                     |> subst tao)
         | _ -> failwith "Unknown error on closure"
     mk_closure scheme
+
+let rec size = function
+        | Application (s, t) -> size s + size t
+        | Lambda (x, s) ->  1 + size s
+        | Var v -> 1
+        | Call(exprOpt, methodInfo, exprs) ->
+            1 + List.sumBy size exprs
+        | PropertyGet(a, propOrValInfo, c) -> 1
+        | Let(var, expr1, expr2) -> 1 + size expr1 + size expr2
+        | Value(value, typ) -> 1
+        | ValueWithName (v,T,name) -> 1
+        | IfThenElse (expr, s, t) -> 1 + size expr + size s + size t
+        | LetRecursive (defs, expr) -> let aux ((v:Var),expr) = 1 + size expr
+                                       List.sumBy aux defs + size expr
+        | NewArray (T, exprs) -> List.sumBy size exprs
+        | t -> 1
+
+let rec depth = function
+        | Application (s, t) -> 1 + max (depth s) (depth t)
+        | Lambda (x, s) ->  1 + depth s
+        | _ -> 1

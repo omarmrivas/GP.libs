@@ -51,3 +51,5 @@ val subst              : (Var * Expr) list -> Expr -> Expr
 val latex_tree         : float -> float -> Expr -> string
 
 val closure            : int -> Expr -> Expr
+val size               : Expr -> int
+val depth              : Expr -> int

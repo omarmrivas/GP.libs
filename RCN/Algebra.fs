@@ -8,6 +8,15 @@ let div x y : base_type =
     then one
     else x / y
 
+let rec iter i f (x : base_type) = 
+    if i <= 0 then x
+    else f (iter (i-1) f x)
+
+let test_zero (t : base_type) x y : base_type =
+    if t >= zero
+    then x
+    else y
+
 let mul x y : base_type = x * y
 
 let add x y : base_type = x + y
@@ -131,3 +140,7 @@ let det m =
         M (V (a, b, c),
            V (d, e, f),
            V (g, h, i)) -> a*e*i+b*f*g+c*d*h-c*e*g-b*d*i-a*f*h
+
+let m_x (M (x, _, _)) = x
+let m_y (M (_, y, _)) = y
+let m_z (M (_, _, z)) = z

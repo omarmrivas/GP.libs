@@ -16,6 +16,7 @@ type gp_data =
     {scheme : Expr
      vars : Var list
      term_size: int
+     term_depth: int
      population_size: int
      generations : int
      bests: int
@@ -69,7 +70,7 @@ let memoize fn =
                   cache.[x] <- v
                   v)
 
-let get_gp_data term_size population_size generations bests mutation_prob finish timeOut seed loadFile saveFile message scheme =
+let get_gp_data term_size term_depth population_size generations bests mutation_prob finish timeOut seed loadFile saveFile message scheme =
     let tcount (var:Var) = 
             let args = (List.length << fst << strip_type) var.Type
             [| 1 .. args + term_size |]
@@ -84,6 +85,7 @@ let get_gp_data term_size population_size generations bests mutation_prob finish
     {scheme = scheme
      vars = vars
      term_size = term_size
+     term_depth = term_depth
      generations = generations
      population_size = population_size
      bests = bests
@@ -160,8 +162,14 @@ let initial_population (data : gp_data) =
                                |> mk_individual)
 //                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
 
+let limit_depth data s t =
+    if depth t <= data.term_depth
+    then t
+    else s
+
 let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
     let t = rename_expr "x" t
+    let t' = clone_expr t
     let (_, ty, q) =
               t |> positions
                 |> List.map (fun p -> (p,1))
@@ -182,6 +190,7 @@ let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
                        |> (fun lam -> Expr.Applications(lam, List.map (List.singleton << Expr.Var) bounds))
     t |> substitute (s, q)
       |> expand Map.empty
+      |> limit_depth data t'
 
 let Mutation ((rnd,count_term) : par_data) (data : gp_data) i =
     if rnd.NextDouble() < data.mutation_prob
@@ -191,6 +200,7 @@ let Mutation ((rnd,count_term) : par_data) (data : gp_data) i =
 
 let crossover (rnd : System.Random) (data : gp_data) s t =
     let s = rename_expr "x" s
+    let s' = clone_expr s
     let t = rename_expr "y" t
     let ps = positions s
     let qs = positions t
@@ -223,6 +233,7 @@ let crossover (rnd : System.Random) (data : gp_data) s t =
                                                                            |> Expr.Var)) xs))) // choose a sigma
        |> (fun (p, (t_q, sigma)) -> substitute (subst sigma t_q, p) s)
        |> expand Map.empty
+       |> limit_depth data s'
 
 let Crossover (rnd : System.Random) data i i' =
     let indx = rnd.Next (List.length i)
@@ -239,6 +250,8 @@ let gp (data : gp_data) : individual option =
         timer.Start()
         let pool = Array.sortBy (fun i -> -i.fitness) pool
         printfn "Best individual: %f" pool.[0].fitness
+        printfn "Average fitness: %f" (Array.averageBy (fun i -> i.fitness) pool)
+        printfn "Average size: %f" (Array.averageBy (fun i -> (float << size) i.norm) pool)
         printfn "Unquoted: %s" (Swensen.Unquote.Operators.decompile pool.[0].norm)
         let bests = Array.take data.bests pool
         let pool' = Array.map (fun i -> (i, i.fitness)) pool
@@ -269,3 +282,4 @@ let gp (data : gp_data) : individual option =
     printfn "Building initial population..."
     data |> initial_population
          |> loop 1
+

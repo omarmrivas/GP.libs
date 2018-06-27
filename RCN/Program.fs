@@ -59,78 +59,56 @@ let best_fitness i =
 
 // Original scheme
 let scheme i =
-    <@@ fun Mx My Mz Gx Gy ->
-         let rec x n : vector3D = 
+    <@@ fun Mx My ->
+         let rec x n : base_type = 
                        if n <= 0
-                       then V (one, zero, zero)
-                       else Mx (n-1) to_base zero one two three pi e
-                               add sub div mul sin cos sinh cosh log exp msqrt mpow
-                               mk_vector3D mk_matrix
-                               v_x v_y v_z
-                               v_add v_sub dot cross v_norm
-                               identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
-         and y n : vector3D = 
+                       then one
+                       else Mx (n-1) to_base zero one two three pi e iter test_zero
+                               add sub div mul sin cos sinh cosh log exp msqrt mpow x y
+         and y n : base_type =
                        if n <= 0
-                       then V (zero, one, zero)
-                       else My (n-1) to_base zero one two three pi e
-                               add sub div mul sin cos sinh cosh log exp msqrt mpow
-                               mk_vector3D mk_matrix
-                               v_x v_y v_z
-                               v_add v_sub dot cross v_norm 
-                               identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
-         and z n : vector3D =
-                       if n <= 0
-                       then V (zero, zero, one)
-                       else Mz (n-1) to_base zero one two three pi e
-                               add sub div mul sin cos sinh cosh log exp msqrt mpow
-                               mk_vector3D mk_matrix
-                               v_x v_y v_z
-                               v_add v_sub dot cross v_norm
-                               identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det x y z
-         and graph n = 
+                       then one
+                       else My (n-1) to_base zero one two three pi e iter test_zero
+                               add sub div mul sin cos sinh cosh log exp msqrt mpow x y
+         let graph n = 
                 [1 .. n]
-                    |> List.map (fun i -> let xi = x i
-                                          let yi = y i
-                                          let zi = z i
-                                          let cx = Gx i to_base zero one two three pi e
-                                                      add sub div mul sin cos sinh cosh log exp msqrt mpow
-                                                      mk_vector3D mk_matrix
-                                                      v_x v_y v_z
-                                                      v_add v_sub dot cross v_norm
-                                                      identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det xi yi zi
-                                          let cy = Gy i to_base zero one two three pi e
-                                                      add sub div mul sin cos sinh cosh log exp msqrt mpow
-                                                      mk_vector3D mk_matrix
-                                                      v_x v_y v_z
-                                                      v_add v_sub dot cross v_norm
-                                                      identity m_add m_sub multiplyM multiplyV translate scale rotate hrotate transpose det xi yi zi
-                                          (cx, cy) : Vertex)
+                    |> List.map (fun i -> (x i, y i) : Vertex)
                     |> List.fold add_vertex (Some empty_graph)
          fun () -> fitness i graph @@>
 
 [<EntryPoint>]
 let main argv =
+    (*let mutable c = 1
+    let rec f () =
+        c <- c + 1
+        System.Console.SetCursorPosition(0, System.Console.CursorTop)
+        printf "%d" c
+        f ()
+
+
+    Utils.timeout 10000 () f ()*)
     let closure = Utils.closure 6 (scheme 0)
-    let term_size = 7
-    let population_size = 1000
+    let term_size = 12
+    let term_depth = 30
+    let population_size = 200
     let generations = 10000
-    let bests = 20
-    let mutation_prob = 0.10
+    let bests = 10
+    let mutation_prob = 0.05
     let finish fit = best_fitness 0 = fit
-    let timeOut = 120000 + 0 * 20 // 2 minute + 20 seconds per n (size of graph)
+    let timeOut = 120000 + 0 * 20000 // 2 minute + 20 seconds per n (size of graph)
     let seed = System.DateTime().Millisecond
     let loadFile = None
     let saveFile = "pool" + string 4 + ".save"
     let message = sprintf "Graph (size = %d)" 4
-    let data = GP_hol.get_gp_data term_size population_size generations bests
-                                  mutation_prob finish timeOut seed
+    let data = GP_hol.get_gp_data term_size term_depth population_size generations 
+                                  bests mutation_prob finish timeOut seed
                                   loadFile saveFile message closure
     [0 .. List.length lower_bound - 1]
         |> List.iter (fun i ->
                         printfn "Using GP to obtain Graph (size = %d) with minimal RCN." (i+4)
                         let closure = Utils.closure (6+i) (scheme i)
                         let finish fit = best_fitness i = fit
-                        let timeOut = 120000 + i * 20 // 2 minute + 20 seconds per n (size of graph)
+                        let timeOut = 120000 + i * 2000 // 2 minute + 20 seconds per n (size of graph)
                         let loadFile = if i = 0
                                        then None
                                        else Some ("pool" + string (i+3) + ".save")
@@ -143,7 +121,10 @@ let main argv =
                                               save_file = saveFile
                                               message = message}
                         match GP_hol.gp data with
-                            | Some i -> printfn "Solution: %s" (Swensen.Unquote.Operators.decompile i.norm)
+                            | Some i -> printfn "************************"
+                                        printfn "Solution: %s" (Swensen.Unquote.Operators.decompile i.norm)
+                                        printfn "for: %s" message
+                                        printfn "************************"
                             | None -> failwith "oops")
     0 // return an integer exit code
         

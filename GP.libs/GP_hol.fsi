@@ -12,6 +12,7 @@ type gp_data =
     {scheme : Expr
      vars : Var list
      term_size: int
+     term_depth: int
      population_size: int
      generations : int
      bests: int
@@ -24,7 +25,6 @@ type gp_data =
      save_file : string
      message: string}
 
-
 type individual =
     {genome: Expr list
      norm: Expr
@@ -32,6 +32,7 @@ type individual =
 
 val get_gp_data :
             term_size       : int ->
+            term_depth      : int ->
             population_size : int ->
             generations     : int ->
             bests           : int ->
