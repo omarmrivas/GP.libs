@@ -184,7 +184,7 @@ let weightRnd_bigint (rnd : Random) (L : ('a * bigint) []) =
         else fld (indx + 1) L i
     fld 0 L bigint.Zero
 
-let select_one (rnd : Random) i l =
+let select_one i l =
     let prefix = List.take i l
     let suffix = List.skip i l
     (prefix, List.head suffix, List.tail suffix)

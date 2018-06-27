@@ -12,7 +12,7 @@ type gp_data =
     {scheme : Expr
      vars : Var list
      term_size: int
-     term_depth: int
+     term_depths: int list
      population_size: int
      generations : int
      bests: int

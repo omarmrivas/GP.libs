@@ -89,7 +89,7 @@ let main argv =
     Utils.timeout 10000 () f ()*)
     let closure = Utils.closure 6 (scheme 0)
     let term_size = 12
-    let term_depth = 30
+    let term_depth = 20
     let population_size = 200
     let generations = 10000
     let bests = 10

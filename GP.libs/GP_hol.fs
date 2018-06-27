@@ -16,7 +16,7 @@ type gp_data =
     {scheme : Expr
      vars : Var list
      term_size: int
-     term_depth: int
+     term_depths: int list
      population_size: int
      generations : int
      bests: int
@@ -78,6 +78,7 @@ let get_gp_data term_size term_depth population_size generations bests mutation_
                 |> Array.filter (fun (_, c) -> c > bigint.Zero)
                 |> (fun L -> printfn "Var: %A, counts: %A" var.Name L
                              L)
+    let dcount (var:Var) = term_depth + (List.length << fst << strip_type) var.Type
     let par_data = [| 1 .. population_size |]
 //                        |> Array.map (fun i -> (Random(i + seed), RandomTerms.count_term))
                         |> Array.map (fun i -> (Random(i + seed), memoize (fun (A,env,s) -> RandomTerms.count_term' A env s)))
@@ -85,7 +86,7 @@ let get_gp_data term_size term_depth population_size generations bests mutation_
     {scheme = scheme
      vars = vars
      term_size = term_size
-     term_depth = term_depth
+     term_depths = List.map dcount vars
      generations = generations
      population_size = population_size
      bests = bests
@@ -162,14 +163,13 @@ let initial_population (data : gp_data) =
                                |> mk_individual)
 //                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
 
-let limit_depth data s t =
-    if depth t <= data.term_depth
+let limit_depth data i s t =
+    if depth t <= data.term_depths.[i]
     then t
     else s
 
 let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
     let t = rename_expr "x" t
-    let t' = clone_expr t
     let (_, ty, q) =
               t |> positions
                 |> List.map (fun p -> (p,1))
@@ -190,17 +190,19 @@ let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
                        |> (fun lam -> Expr.Applications(lam, List.map (List.singleton << Expr.Var) bounds))
     t |> substitute (s, q)
       |> expand Map.empty
-      |> limit_depth data t'
 
 let Mutation ((rnd,count_term) : par_data) (data : gp_data) i =
     if rnd.NextDouble() < data.mutation_prob
-    then let (prefix, x, suffix) = select_one rnd (rnd.Next (List.length i)) i
-         prefix @ (mutation (rnd,count_term) data x :: suffix)
+    then let indx = rnd.Next (List.length i)
+         let (prefix, x, suffix) = select_one indx i
+         let x' = clone_expr x
+         let x'' = x |> mutation (rnd,count_term) data
+                     |> limit_depth data indx x'
+         prefix @ (x'' :: suffix)
     else i
 
 let crossover (rnd : System.Random) (data : gp_data) s t =
     let s = rename_expr "x" s
-    let s' = clone_expr s
     let t = rename_expr "y" t
     let ps = positions s
     let qs = positions t
@@ -233,13 +235,14 @@ let crossover (rnd : System.Random) (data : gp_data) s t =
                                                                            |> Expr.Var)) xs))) // choose a sigma
        |> (fun (p, (t_q, sigma)) -> substitute (subst sigma t_q, p) s)
        |> expand Map.empty
-       |> limit_depth data s'
 
 let Crossover (rnd : System.Random) data i i' =
     let indx = rnd.Next (List.length i)
-    let (prefix, s, suffix) = select_one rnd indx i
-    let (_, t, _) = select_one rnd indx i'
-    let x = crossover rnd data s t
+    let (prefix, s, suffix) = select_one indx i
+    let (_, t, _) = select_one indx i'
+    let s' = clone_expr s
+    let x = t |> crossover rnd data s
+              |> limit_depth data indx s'
     prefix @ (x :: suffix)
 
 let gp (data : gp_data) : individual option =
