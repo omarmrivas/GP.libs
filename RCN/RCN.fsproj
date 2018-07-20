@@ -10,6 +10,8 @@
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BigRational.fsi" />
+    <Compile Include="BigRational.fs" />
     <Compile Include="DataTypes.fs" />
     <Compile Include="Approximation.fs" />
     <Compile Include="Algebra.fs" />
@@ -17,12 +19,6 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Unquote" Version="4.0.0" />
-    <PackageReference Include="FsPickler" Version="4.0.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="GP.libs">
-      <HintPath>..\GP.libs\bin\Release\netstandard2.0\GP.libs.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\GP.libs\GP.libs.fsproj" />
   </ItemGroup>
 </Project>

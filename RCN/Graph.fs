@@ -4,6 +4,7 @@ open System
 open DataTypes
 open Approximation
 
+
 [<Serializable>]
 type PlanarGraph =
          {vertices: Vertex list
@@ -112,3 +113,4 @@ let add_vertex graph vertex =
              quadrilaterals = quadrilaterals @ new_quadrilaterals;
              crossing_number = crossing_number + crossing_number'}
                   |> Some
+

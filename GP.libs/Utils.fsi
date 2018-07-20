@@ -16,6 +16,7 @@ val pmap : ('a -> 'b) -> 'a [] -> 'b []
 // Not really useful as it would lead to stack overflows in
 // non-terminating function calls
 val timeout : int -> 'a -> ('b -> 'a) -> 'b -> 'a
+//val timeout' : int -> 'a -> ('b -> 'a) -> 'b -> 'a
 
 (*val serialize : string -> 'a -> unit
 val deserialize : string -> 'a*)

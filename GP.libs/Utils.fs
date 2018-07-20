@@ -7,6 +7,7 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open FSharp.Collections.ParallelSeq
 open RandomBigInteger
+open Swensen.Unquote.Extensions
 open Name
 
 (* Generic utilities *)
@@ -14,18 +15,19 @@ open Name
 let tap f x = f x |> ignore
               x
 
-(*let pmap f xs =
+let pmap f xs =
         let l = 100.0 / ((float << Array.length) xs)
         let mutable c = 0.0
         let f' x = let r = f x
                    c <- c + 1.0
                    Console.SetCursorPosition(0, Console.CursorTop)
                    printf "%.3f%%" (c * l)
+                   printf "*"
                    r
         xs |> Array.toSeq
            |> PSeq.map f'
            |> PSeq.toArray
-           |> tap (fun _ -> printfn "")*)
+           |> tap (fun _ -> printfn "")
 
 (*let pmap f xs =
         let l = 100.0 / ((float << Array.length) xs)
@@ -38,7 +40,7 @@ let tap f x = f x |> ignore
         xs |> Array.Parallel.map f'
            |> tap (fun _ -> printfn "")*)
 
-let pmap f xs =
+(*let pmap f xs =
     let l = 100.0 / ((float << Array.length) xs)
     let mutable c = 0.0
     let f' x = let r = f x
@@ -49,7 +51,7 @@ let pmap f xs =
     xs |> Array.chunkBySize System.Environment.ProcessorCount
        |> Array.map (Array.Parallel.map f')
        |> Array.concat
-       |> tap (fun _ -> printfn "")
+       |> tap (fun _ -> printfn "")*)
 
 (*type Async with
     static member WithCancellation (token:CancellationToken) operation = 
@@ -80,15 +82,26 @@ let timeout (time:int) def f v =
 
 // Not really useful as it would lead to stack overflows in
 // non-terminating function calls
-let timeout time def f v =
+let timeout (time:int) def f v =
     try
-        let tokenSource = new CancellationTokenSource()
+        let tokenSource = new CancellationTokenSource(time)
         let token = tokenSource.Token
         let task = Task.Factory.StartNew(fun () -> f v, token)
         if not (task.Wait(time, token))
         then def
-        else (fun (x, y) -> x) task.Result
+        else fst task.Result
     with e -> def
+
+(*let timeout' (time:int) def f v =
+    try
+        let tokenSource = new CancellationTokenSource(time)
+        let token = tokenSource.Token
+        let task = Task.Factory.StartNew(fun () -> timeout time def f v, token)
+        if not (task.Wait(time, token))
+        then def
+        else fst task.Result
+    with e -> def*)
+
 
 (*let serialize (file : string) obj =
     let serializer = System.Runtime.Serialization.Formatters.Binary.BinaryFormatter()
@@ -375,6 +388,10 @@ let latex_tree (levelsep:float) (nodesep:float) t =
     "\\psset{levelsep=" + string levelsep + ",nodesep=" + string nodesep + "pt}" +
     latext t
 
+(*
+    TODO: add parameter with default ground values for functions whose counter reach 0
+          Now the default value is used intead (Expr.DefaultValue).
+*)
 let closure (max_calls : int) scheme =
     let names = scheme |> vars_of_expr
                        |> List.map (fun (v:Var) -> v.Name)
@@ -396,7 +413,9 @@ let closure (max_calls : int) scheme =
                   |> List.unzip
     let num_args_counters_defaults = List.zip3 numargs counters defaults
     let newfuncs = List.map2 (fun (v:Var) ty -> Var (v.Name, ty)) funcs newtyps
+    List.iter (fun (v:Var) -> printfn "newfuncs: %A" (v.Name, v.Type.FSharpName)) newfuncs
     let sigma = List.map2 (fun v v' -> (v, v')) funcs newfuncs
+    // LHS substitution
     let sigma' = List.map (fun (v, v') -> 
                     (v, Expr.Applications(Expr.Var v', 
                                           List.map (List.singleton << Expr.Var) counters))) sigma
@@ -438,4 +457,22 @@ let rec size = function
 let rec depth = function
         | Application (s, t) -> 1 + max (depth s) (depth t)
         | Lambda (x, s) ->  1 + depth s
-        | _ -> 1
+        | Var v -> 1
+        | Call(exprOpt, methodInfo, exprs) ->
+            if List.isEmpty exprs
+            then 1
+            else 1 + depth (List.maxBy depth exprs)
+        | PropertyGet(a, propOrValInfo, c) -> 1
+        | Let(var, expr1, expr2) -> 1 + max (depth expr1) (depth expr2)
+        | Value(value, typ) -> 1
+        | ValueWithName (v,T,name) -> 1
+        | IfThenElse (expr, s, t) -> 1 + max (depth expr) (max (depth s) (depth t))
+        | LetRecursive (defs, expr) -> let aux ((v:Var),expr) = 1 + depth expr
+                                       if List.isEmpty defs
+                                       then depth expr
+                                       else max (aux (List.maxBy aux defs)) (depth expr)
+        | NewArray (T, exprs) -> if List.isEmpty exprs
+                                 then 1
+                                 else 1 + depth (List.maxBy depth exprs)
+        | t -> 1
+

@@ -27,6 +27,7 @@ type gp_data =
 
 type individual =
     {genome: Expr list
+     eta_norm : Expr
      norm: Expr
      fitness: float}
 
@@ -47,5 +48,5 @@ val get_gp_data :
                            -> gp_data
 
 val gp : data  : gp_data
-              -> individual option
+              -> (gp_data * individual) option
         

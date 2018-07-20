@@ -5,10 +5,14 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
 
+open System.IO
+open MathNet.Numerics
+
 open DataTypes
 open Approximation
 open Graph
 open Algebra
+open GP_hol
 
 let lower_bound =
     [4, 0
@@ -58,18 +62,18 @@ let best_fitness i =
     x * x
 
 // Original scheme
-let scheme i =
+let scheme k i =
     <@@ fun Mx My ->
-         let rec x n : base_type = 
+         let rec x n : base_type =
                        if n <= 0
                        then one
-                       else Mx (n-1) to_base zero one two three pi e iter test_zero
-                               add sub div mul sin cos sinh cosh log exp msqrt mpow x y
+                       else Mx (n-1) to_base zero one two three (pi k) (e k) iter test_zero
+                               add sub div mul neg (sin k) (cos k) (sinh k) (cosh k) (tan k) (tanh k) (ln k) (exp k) (msqrt k) x y
          and y n : base_type =
                        if n <= 0
-                       then one
-                       else My (n-1) to_base zero one two three pi e iter test_zero
-                               add sub div mul sin cos sinh cosh log exp msqrt mpow x y
+                       then -one
+                       else My (n-1) to_base zero one two three (pi k) (e k) iter test_zero
+                               add sub div mul neg (sin k) (cos k) (sinh k) (cosh k) (tan k) (tanh k) (ln k) (exp k) (msqrt k) x y
          let graph n = 
                 [1 .. n]
                     |> List.map (fun i -> (x i, y i) : Vertex)
@@ -78,41 +82,43 @@ let scheme i =
 
 [<EntryPoint>]
 let main argv =
-    (*let mutable c = 1
-    let rec f () =
-        c <- c + 1
-        System.Console.SetCursorPosition(0, System.Console.CursorTop)
-        printf "%d" c
-        f ()
-
-
-    Utils.timeout 10000 () f ()*)
-    let closure = Utils.closure 6 (scheme 0)
+//    List.iter (fun i -> printfn "%f" (BigRational.ToDouble (Approximation.ln i (BigRational.FromInt(5))))) [1..10]
+    let i = if Array.isEmpty argv
+            then 0
+            else let i = int argv.[0]
+                 printfn "Starting with graph size = %i" i
+                 i-4
+    let closure = Utils.closure 6 (scheme 4 0)
     let term_size = 12
-    let term_depth = 20
+    let term_depth = 12
     let population_size = 200
     let generations = 10000
     let bests = 10
-    let mutation_prob = 0.05
+    let mutation_prob = 0.4
     let finish fit = best_fitness 0 = fit
     let timeOut = 120000 + 0 * 20000 // 2 minute + 20 seconds per n (size of graph)
-    let seed = System.DateTime().Millisecond
+    let seed = System.DateTime.Now.Millisecond
+    printfn "Seed: %d" seed
     let loadFile = None
     let saveFile = "pool" + string 4 + ".save"
     let message = sprintf "Graph (size = %d)" 4
     let data = GP_hol.get_gp_data term_size term_depth population_size generations 
                                   bests mutation_prob finish timeOut seed
                                   loadFile saveFile message closure
-    [0 .. List.length lower_bound - 1]
-        |> List.iter (fun i ->
+    [i .. List.length lower_bound - 1]
+        |> List.fold (fun data i ->
                         printfn "Using GP to obtain Graph (size = %d) with minimal RCN." (i+4)
-                        let closure = Utils.closure (6+i) (scheme i)
+                        let closure = Utils.closure (6+i) (scheme (4+i) i)
                         let finish fit = best_fitness i = fit
-                        let timeOut = 120000 + i * 2000 // 2 minute + 20 seconds per n (size of graph)
-                        let loadFile = if i = 0
-                                       then None
-                                       else Some ("pool" + string (i+3) + ".save")
-                        let saveFile = "pool" + string (i+4) + ".save"
+                        let timeOut = 1200000 + i * 200000 // 20 minute + 3.3 minutes per n (size of graph)
+                        let (loadFile, saveFile) =
+                                if File.Exists( "pool" + string (i+4) + ".save" )
+                                then (Some ("pool" + string (i+4) + ".save"), 
+                                      "pool" + string (i+4) + ".save")
+                                else if i = 0
+                                     then (None, "pool" + string (i+4) + ".save")
+                                     else (Some ("pool" + string (i+3) + ".save"),
+                                           "pool" + string (i+4) + ".save")
                         let message = sprintf "Graph (size = %d)" (i+4)
                         let data = {data with scheme = closure
                                               finish = finish
@@ -121,10 +127,13 @@ let main argv =
                                               save_file = saveFile
                                               message = message}
                         match GP_hol.gp data with
-                            | Some i -> printfn "************************"
+                            | Some (data, i) -> 
+                                        printfn "************************"
                                         printfn "Solution: %s" (Swensen.Unquote.Operators.decompile i.norm)
                                         printfn "for: %s" message
                                         printfn "************************"
-                            | None -> failwith "oops")
+                                        data
+                            | None -> failwith "oops") data
+        |> ignore
     0 // return an integer exit code
         

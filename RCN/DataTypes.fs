@@ -1,8 +1,9 @@
 ﻿module DataTypes
 
 open System
+open MathNet.Numerics
 
-type base_type = double
+type base_type = BigRational
 
 type vector2D = base_type * base_type
 

@@ -3,8 +3,9 @@ module Algebra
 open DataTypes
 open Approximation
 
-let div x y : base_type =
-    if y = zero
+
+let div x (y:base_type) : base_type =
+    if y.IsZero
     then one
     else x / y
 
@@ -17,13 +18,15 @@ let test_zero (t : base_type) x y : base_type =
     then x
     else y
 
+let neg x : base_type = -x
+
 let mul x y : base_type = x * y
 
 let add x y : base_type = x + y
 
 let sub x y : base_type = x - y
 
-let mk_vector3D x y z : vector3D = V (x,y,z)
+(*let mk_vector3D x y z : vector3D = V (x,y,z)
 
 let mk_matrix x y z : matrix = M (x,y,z)
 
@@ -144,3 +147,5 @@ let det m =
 let m_x (M (x, _, _)) = x
 let m_y (M (_, y, _)) = y
 let m_z (M (_, _, z)) = z
+
+*)
