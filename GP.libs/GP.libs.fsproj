@@ -18,6 +18,7 @@
     <Compile Include="Serialize.fs" />
     <Compile Include="GP_hol.fsi" />
     <Compile Include="GP_hol.fs" />
+    <Compile Include="Gnuplot.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Unquote" Version="4.0.0" />

@@ -12,6 +12,22 @@ open Name
 
 (* Generic utilities *)
 
+let normal_distrib x =
+    exp (- x * x)
+
+// mu = center of distribution
+// var = variance
+let general_normal_distrib mu var x =
+    normal_distrib((x - mu) / var)
+
+let fitness_normal to_float (f : 'a -> 'b) xs =
+    List.averageBy (fun (input, output) -> 
+                        let x = f input
+                        if x = output
+                        then 1.0
+                        else let output' = to_float output
+                             general_normal_distrib output' (output' / 2.0) (to_float x)) xs
+
 let tap f x = f x |> ignore
               x
 
@@ -22,7 +38,6 @@ let pmap f xs =
                    c <- c + 1.0
                    Console.SetCursorPosition(0, Console.CursorTop)
                    printf "%.3f%%" (c * l)
-                   printf "*"
                    r
         xs |> Array.toSeq
            |> PSeq.map f'
