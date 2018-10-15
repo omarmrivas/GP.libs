@@ -5,6 +5,7 @@ open System.Numerics
 open RandomBigInteger
 open System.Collections.Generic
 open Microsoft.FSharp.Quotations
+open Swensen.Unquote.Extensions
 open Utils
 
 type par_data = Random * (Type * (Type*bigint) list * int -> bigint)
@@ -14,8 +15,8 @@ type term = Free of string * System.Type
           | App of term * term
 
 let memoize fn =
-//  let cache = new System.Collections.Concurrent.ConcurrentDictionary<_,_>()
-  let cache = new System.Collections.Generic.Dictionary<_,_>()
+  let cache = new System.Collections.Concurrent.ConcurrentDictionary<_,_>()
+//  let cache = new System.Collections.Generic.Dictionary<_,_>()
   (fun x ->
     match cache.TryGetValue x with
     | true, v -> v
@@ -97,12 +98,12 @@ and count_head_var_arg_terms (bis, B) env s =
                   multipl) (ndk (s - 1 - m) m))
     else bigint 0
 
-let count_term =
+let count_term () =
     memoize (fun (A,env,s) -> count_term' A env s)
 
 (*let count_term (A,env,s) = count_term' A env s*)
 
-let count_terms A s = count_term (A, [], s)
+//let count_terms A s = count_term (A, [], s)
 
 (* Random generation of terms *)
 
@@ -180,6 +181,7 @@ and gen_app_term ((rnd, count_term) : par_data) A env s num_app_terms =
 let rec normalize_closed_term vars v =
     match v with
         | Free (n, _) ->
+            // FIXME: some error?
             vars |> List.find (fun (name, var) -> name = n)
                  |> snd
         | App (s, t) ->
@@ -188,8 +190,11 @@ let rec normalize_closed_term vars v =
             let var = Var (n, T)
             Expr.Lambda (var, normalize_closed_term ((n,Expr.Var var) :: vars) t)
 
-let random_term par_data A s =
+let rec random_term par_data A s =
     match gen_term par_data A [] s with
-      Some t -> Some (normalize_closed_term [] t)
+      Some t -> try 
+                    Some (normalize_closed_term [] t)
+                with | e -> printfn "Error producing type: %s - %d" A.FSharpName s
+                            random_term par_data A s
     | None -> None
 

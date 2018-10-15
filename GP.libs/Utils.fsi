@@ -8,14 +8,20 @@ open Microsoft.FSharp.Quotations.Patterns
 
 (* Generic utilities *)
 
-val fitness_normal :
+val fitness_normal_1 :
             to_float : ('b -> float) ->
             f        : ('a -> 'b) ->
             xs       : ('a * 'b) list
              -> float when 'b : equality
 
+val fitness_normal_2 :
+            to_float : ('c -> float) ->
+            f        : ('a -> 'b -> 'c) ->
+            xs       : ('a * 'b * 'c) list
+             -> float when 'c : equality
+
 val tap : ('a -> 'b) -> 'a -> 'a
-val pmap : ('a -> 'b) -> 'a [] -> 'b []
+val pmap : bool -> ('a -> 'b) -> 'a [] -> 'b []
 
 //val memoize : ('a -> 'b) -> ('a -> 'b)
 

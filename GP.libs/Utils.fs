@@ -20,9 +20,17 @@ let normal_distrib x =
 let general_normal_distrib mu var x =
     normal_distrib((x - mu) / var)
 
-let fitness_normal to_float (f : 'a -> 'b) xs =
+let fitness_normal_1 to_float (f : 'a -> 'b) xs =
     List.averageBy (fun (input, output) -> 
                         let x = f input
+                        if x = output
+                        then 1.0
+                        else let output' = to_float output
+                             general_normal_distrib output' (output' / 2.0) (to_float x)) xs
+
+let fitness_normal_2 to_float (f : 'a -> 'b -> 'c) xs =
+    List.averageBy (fun (a, b, output) -> 
+                        let x = f a b
                         if x = output
                         then 1.0
                         else let output' = to_float output
@@ -31,18 +39,17 @@ let fitness_normal to_float (f : 'a -> 'b) xs =
 let tap f x = f x |> ignore
               x
 
-let pmap f xs =
-        let l = 100.0 / ((float << Array.length) xs)
-        let mutable c = 0.0
+let pmap par f xs =
         let f' x = let r = f x
-                   c <- c + 1.0
-                   Console.SetCursorPosition(0, Console.CursorTop)
-                   printf "%.3f%%" (c * l)
+                   printf "*"
                    r
-        xs |> Array.toSeq
-           |> PSeq.map f'
-           |> PSeq.toArray
-           |> tap (fun _ -> printfn "")
+        if par
+        then xs |> Array.toSeq
+                |> PSeq.map f'
+                |> PSeq.toArray
+                |> tap (fun _ -> printfn "")
+        else xs |> Array.map f'
+                |> tap (fun _ -> printfn "")
 
 (*let pmap f xs =
         let l = 100.0 / ((float << Array.length) xs)

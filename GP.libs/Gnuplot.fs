@@ -20,9 +20,10 @@ let dest_result = function
     | Unsolved sts -> sts
 
 let max_error (sts : gp_result list) =
+    let error = ((dest_result << List.head) sts).error
     sts |> List.collect ((fun data -> data.statistics) << dest_result)
-        |> List.maxBy (fun sts -> sts.average_error)
-        |> (fun sts -> sts.average_error)
+        |> List.maxBy (fun sts -> error sts.best_individual.fitness)
+        |> (fun sts -> error sts.best_individual.fitness)
 
 let max_generation (sts : gp_result list) =
     sts |> List.maxBy (List.length << (fun data -> data.statistics) << dest_result)
@@ -111,11 +112,11 @@ let gp_statistics_to_cumulative_prob_plot file title generations (sts1 : gp_resu
     |> List.map ((fun str -> str) << String.concat " " << List.map string)
     |> (fun lines -> File.WriteAllLines (datafile, lines))
 
-let compare_lambda_terms_plot file title size (scheme1 : Expr) (scheme2 : Expr) =
+let compare_lambda_terms_plot par file title size (scheme1 : Expr) (scheme2 : Expr) =
     let datafile = file + "LambdaTerms.data"
     let plotfile = file + "LambdaTerms.plot"
-    let cums1 = num_lambda_terms size scheme1
-    let cums2 = num_lambda_terms size scheme2
+    let cums1 = num_lambda_terms par size scheme1
+    let cums2 = num_lambda_terms par size scheme2
     let header =["set terminal epslatex color"
                  "set output \"" + file + "LambdaTerms.tex\""
                  "set format y \"$10^{%T}$\""

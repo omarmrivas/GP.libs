@@ -9,11 +9,6 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Unquote" Version="4.0.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="GP.libs">
-      <HintPath>..\GP.libs\bin\Debug\netstandard2.0\GP.libs.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\GP.libs\GP.libs.fsproj" />
   </ItemGroup>
 </Project>

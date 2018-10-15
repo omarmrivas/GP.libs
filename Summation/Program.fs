@@ -22,7 +22,7 @@ let in_out = [([1], 1)
               ([1;2;3;4;5;6;7;8], 36)
               ([9;8;7;6;5;4;3;2;1],45)]
 
-let fitness f = fitness_normal float f in_out
+let fitness f = fitness_normal_1 float f in_out
 
 // Constructor-style sum scheme
 let constructor_style_sum_scheme =
@@ -51,28 +51,30 @@ let run_experiment msg scheme i =
     let closure = Utils.closure 10 scheme
     let term_size = 17
     let term_depth = 18
+    let max_term_size = 25
     let population_size = 500
     let generations = 1000
     let bests = 25
-    let mutation_prob = 0.25
+    let mutation_prob = 0.10
     let error fit = 1.0 - fit
     let timeOut = 3000
     let seed = Guid.NewGuid().GetHashCode()
     printfn "Random seed: %i" seed
     let loadFile = None
     let saveFile = "pool.save"
-    let data = GP_hol.get_gp_data term_size term_depth population_size generations
-                                  bests mutation_prob error timeOut seed
+    let par = false
+    let data = GP_hol.get_gp_data par term_size max_term_size term_depth population_size 
+                                  generations bests mutation_prob error timeOut seed
                                   loadFile saveFile msg closure
     GP_hol.gp data
 
 [<EntryPoint>]
 let main argv =
-    compare_lambda_terms_plot ("Sum" + string 500) "Number of typed $\\\\lambda$-terms for Sum" 40 constructor_style_sum_scheme destructor_style_sum_scheme
-    execute "/usr/local/bin/gnuplot" "Sum500LambdaTerms.plot" |> ignore
+    (*compare_lambda_terms_plot ("Sum" + string 500) "Number of typed $\\\\lambda$-terms for Sum" 40 constructor_style_sum_scheme destructor_style_sum_scheme
+    execute "/usr/local/bin/gnuplot" "Sum500LambdaTerms.plot" |> ignore*)
 
-    let dests = [1 .. 10] |> List.map (fun i -> run_experiment ("Experiment destructor_style_sum_scheme: " + string i) destructor_style_sum_scheme i)
-    let consts = [1 .. 10] |> List.map (fun i -> run_experiment ("Experiment constructor_style_sum_scheme: " + string i) constructor_style_sum_scheme i)
+    let dests = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment destructor_style_sum_scheme: " + string i) destructor_style_sum_scheme i)
+    let consts = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment constructor_style_sum_scheme: " + string i) constructor_style_sum_scheme i)
     let (eqs1, alleq1) = gp_statistics_to_equals 500 dests
     let (eqs2, alleq2) = gp_statistics_to_equals 500 consts
     printfn "gp_statistics_to_equals Destructive: (%i, %i)" eqs1 alleq1

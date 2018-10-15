@@ -44,6 +44,7 @@ type gp_data =
         scheme : Expr
         vars : Var list
         term_size: int
+        max_term_size : int
         term_depths: int list
         population_size: int
         generations : int
@@ -53,10 +54,12 @@ type gp_data =
         term_count: (int * bigint) [] list
         timeout : int
         par_data : par_data []
+        par : bool
         load_file : string option
         save_file : string
         message: string
         statistics : gp_statistic list
+        memoization : bool
         T : Map<string, individual>
     }
 
@@ -122,26 +125,34 @@ let statistics (data : gp_data) pool =
         }
     {data with term_depths = depths
                statistics = statistic :: data.statistics
-               T = Array.fold (fun T (_, i) -> Map.add (Swensen.Unquote.Operators.decompile i.eta_norm) i T) data.T pool},
+               T = if data.memoization
+                   then Array.fold (fun T (_, i) -> Map.add (Swensen.Unquote.Operators.decompile i.eta_norm) i T) data.T pool
+                   else data.T},
     Array.map snd pool
 
-let get_gp_data term_size term_depth population_size generations bests mutation_prob error timeOut seed loadFile saveFile message scheme =
+let get_gp_data memoization par term_size max_term_size term_depth population_size generations bests mutation_prob error timeOut seed loadFile saveFile message scheme =
+    let count_term = RandomTerms.count_term ()
+    let count_terms A s = count_term (A, [], s)
     let tcount (var:Var) = 
             let args = (List.length << fst << strip_type) var.Type
             [| 1 .. args + term_size |]
-                |> Array.map (fun i -> (i, RandomTerms.count_terms var.Type i))
+                |> Array.map (fun i -> (i, count_terms var.Type i))
                 |> Array.filter (fun (_, c) -> c > bigint.Zero)
                 |> (fun L -> printfn "Var: %A, counts: %A" var.Name L
                              L)
     let dcount (var:Var) = term_depth + (List.length << fst << strip_type) var.Type
     let rnd = Random(seed)
-    let par_data = [| 1 .. population_size |]
+    let par_data = if par
+                   then [| 1 .. population_size |]
 //                        |> Array.map (fun i -> (Random(i + seed), RandomTerms.count_term))
                         |> Array.map (fun i -> (Random(rnd.Next() + i), memoize (fun (A,env,s) -> RandomTerms.count_term' A env s)))
+                   else [| 1 .. population_size |]
+                        |> Array.map (fun i -> (rnd, count_term))
     let vars = lambdas scheme
     {scheme = scheme
      vars = vars
      term_size = term_size
+     max_term_size = max_term_size
      term_depths = List.map dcount vars
      generations = generations
      population_size = population_size
@@ -151,10 +162,12 @@ let get_gp_data term_size term_depth population_size generations bests mutation_
      term_count = List.map tcount vars
      timeout = timeOut
      par_data = par_data
+     par = par
      load_file = loadFile
      save_file = saveFile
      message = message
      statistics = []
+     memoization = memoization
      T = Map.empty}
 
 let mk_proto_individual (data : gp_data) lams : proto_individual =
@@ -215,7 +228,7 @@ let initial_population (data : gp_data) : gp_data * individual [] =
     else 
      data.par_data
         |> Array.mapi (fun i x -> (i, x))
-        |> pmap (fun (i, (rnd,count_term)) ->
+        |> pmap data.par (fun (i, (rnd,count_term)) ->
                 (*let timer = new System.Diagnostics.Stopwatch()
                 timer.Start()*)
                 if i % 2 = 0
@@ -242,6 +255,7 @@ let limit_depth data i s t =
 
 let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
     let t = rename_expr "x" t
+    let count_terms A s = count_term (A, [], s)
     let (_, ty, q) =
               t |> positions
                 |> List.map (fun p -> (p,1))
@@ -253,7 +267,7 @@ let mutation ((rnd,count_term) : par_data) (data : gp_data) t =
                             |> (fun typs -> typs ---> ty)
     let args = (List.length << fst << strip_type) target_typ
     let term_count = [|1 .. args + data.term_size|]
-                        |> Array.map (fun i -> (i, RandomTerms.count_terms target_typ i))
+                        |> Array.map (fun i -> (i, count_terms target_typ i))
                         |> Array.filter (fun (_, c) -> c > bigint.Zero)
     let s = term_count |> weightRnd_bigint rnd
                        |> RandomTerms.random_term (rnd,count_term) target_typ
@@ -320,11 +334,23 @@ let Crossover (rnd : System.Random) data i i' =
 let gp (data : gp_data) : gp_result =
     printfn "%s" (gp_data_to_string data)
     let rest_size = data.population_size - data.bests
+    let make_new_ind (rnd : Random, count_term) =
+        if rnd.NextDouble () < 0.5
+        then data.vars |> List.map2 (fun count var -> (count, var)) data.term_count
+                       |> List.choose (fun (count, var : Var) -> 
+                         count |> weightRnd_bigint rnd
+                               |> RandomTerms.random_term (rnd,count_term) var.Type)
+        else data.vars |> List.map2 (fun count var -> (count, var)) data.term_count
+                       |> List.choose (fun (count, var : Var) -> 
+                         count |> Array.map (fun (x, _) -> (x, 1))
+                               |> weightRnd_int rnd
+                               |> RandomTerms.random_term (rnd,count_term) var.Type)
     let next_generation data pool =
         let timer = new System.Diagnostics.Stopwatch()
         timer.Start()
         let pool = Array.sortBy (fun i -> -i.fitness) pool
         printfn "Best individual: %f" pool.[0].fitness
+        printfn "Best individual error: %f" (data.error data.statistics.[0].best_individual.fitness)
         printfn "Best individual statistics:"
         List.iter (fun e -> printfn "size: %i, depth: %i" (size e) (depth e)) pool.[0].genome
         printfn "Average fitness: %f" data.statistics.[0].average_fitness //(Array.averageBy (fun i -> i.fitness) pool)
@@ -351,7 +377,7 @@ let gp (data : gp_data) : gp_result =
         let pool' = Array.map (fun i -> (i, i.fitness)) pool
         let rest = data.par_data
                         |> Array.take rest_size
-                        |> pmap (fun (rnd,count_term) ->
+                        |> pmap data.par (fun (rnd,count_term) ->
                                 let i1 = weightRnd_double rnd pool'
                                 let i2 = weightRnd_double rnd pool'
                                 let i = i2.genome //|> tap (fun _ -> printfn "Starting crossover")
@@ -359,6 +385,9 @@ let gp (data : gp_data) : gp_result =
                                                   //|> tap (fun _ -> printfn "Starting Mutation")
                                                   |> Mutation (rnd,count_term) data
                                                   //|> tap (fun _ -> printfn "ready...")
+                                let i = if List.exists (fun expr -> size expr >= data.max_term_size) i
+                                        then make_new_ind (rnd,count_term)
+                                        else i
                                 i |> mk_proto_individual data
                                   |> mk_individual data)
         printfn "Elapsed Time: %i sec" (timer.ElapsedMilliseconds / 1000L)
@@ -370,17 +399,19 @@ let gp (data : gp_data) : gp_result =
         printfn "Generation: %i" i
         serialize data pool
         match Array.tryFind (fun i -> data.error i.fitness = 0.0) pool with
-            | Some i -> Solved (data, i)
+            | Some i -> Solved ({data with statistics = List.rev data.statistics}, i)
             | None -> if i < data.generations
                       then loop (i + 1) (next_generation data pool)
                       else Unsolved data
     printfn "Building initial population..."
     loop 1 (initial_population data)
 
-let num_lambda_terms size scheme =
+let num_lambda_terms par size scheme =
+    let count_term = RandomTerms.count_term ()
+    let count_terms A s = count_term (A, [], s)
     let tcount (var:Var) = 
             [| 1 .. size |]
-                |> pmap (fun i -> (i, RandomTerms.count_terms var.Type i))
+                |> pmap par (fun i -> (i, count_terms var.Type i))
 //                |> Array.filter (fun (_, c) -> c > bigint.Zero)
                 |> Array.sortBy fst
                 |> (fun L -> printfn "Var: %A, counts: %A" var.Name L

@@ -37,6 +37,7 @@ type gp_data =
         scheme : Expr
         vars : Var list
         term_size: int
+        max_term_size : int
         term_depths: int list
         population_size: int
         generations : int
@@ -46,10 +47,12 @@ type gp_data =
         term_count: (int * bigint) [] list
         timeout : int
         par_data : par_data []
+        par : bool
         load_file : string option
         save_file : string
         message: string
         statistics : gp_statistic list
+        memoization : bool
         T : Map<string, individual>
     }
 
@@ -58,7 +61,10 @@ type gp_result =
     | Unsolved of gp_data
 
 val get_gp_data :
+            memoization     : bool ->
+            par             : bool ->
             term_size       : int ->
+            max_term_size   : int ->
             term_depth      : int ->
             population_size : int ->
             generations     : int ->
@@ -76,6 +82,7 @@ val get_gp_data :
 val gp : data  : gp_data
               -> gp_result
 
-val num_lambda_terms : size   : int ->
+val num_lambda_terms : par    : bool ->
+                       size   : int ->
                        scheme : Expr ->
                        (int * Numerics.BigInteger) list
