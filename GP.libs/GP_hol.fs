@@ -113,6 +113,7 @@ let statistics (data : gp_data) pool =
                                         else d) best.genome data.term_sizes
     let sizes = pool |> Array.sortBy (fun (_, i) -> -i.fitness)
                      |> Array.take data.bests
+                     |> Array.filter (fun (_, i) -> i.fitness >= 0.75 * best.fitness)
                      |> Array.map (get_sizes << snd)
                      |> Array.fold (List.map2 max) data.term_sizes
 
