@@ -68,8 +68,7 @@ let run_experiment msg scheme i =
     printfn "Starting experiment %i" i
     let closure = Utils.closure 10 scheme
     let term_size = 21
-    let max_term_size = 25
-    let term_depth = 21
+    let delta_term = 3
     let population_size = 500
     let generations = 500
     let bests = 25
@@ -82,7 +81,7 @@ let run_experiment msg scheme i =
     let saveFile = "pool.save"
     let par = false
     let memoization = false
-    let data = GP_hol.get_gp_data memoization par term_size max_term_size term_depth 
+    let data = GP_hol.get_gp_data memoization par term_size delta_term
                                   population_size generations bests mutation_prob error 
                                   timeOut seed loadFile saveFile msg closure
     GP_hol.gp data
@@ -105,7 +104,7 @@ let main argv =
 (*    compare_lambda_terms_plot ("Ackerman" + string 500) "Number of typed $\\\\lambda$-terms for Ackerman" 40 constructor_style_ackerman_scheme destructor_style_ackerman_scheme
     execute "/usr/local/bin/gnuplot" "Ackerman500LambdaTerms.plot" |> ignore*)
 
-    let scheme = destructor_style_ackerman_scheme
+(*    let scheme = destructor_style_ackerman_scheme
                  |> Utils.closure 10
     printfn "Fuck"
     let M = <@@ fun (x:nat) (xa:nat) (xb:nat) xc xd (xf:nat->nat->bool) xe xg (xh:nat->nat) -> xc (xe (xf xb x) xa (xg (xe (xf xb (xe (xf xb (xc xa)) xa xa)) xa (xe (xf (xe (xf x xa) xb x) (xd xa)) xa (xc xa))))) @@>
@@ -124,10 +123,9 @@ let main argv =
     // fun a b c d -> c (c a)
     // fun a b c d e f -> e (f b)
 
-    printfn "f(): %A" (f ())
+    printfn "f(): %A" (f ())*)
 
-
-    (*let dests = [1 .. 20] |> PSeq.map (fun i -> run_experiment ("Experiment destructor_style_ackerman_scheme: " + string i) destructor_style_ackerman_scheme i)
+    let dests = [1 .. 20] |> PSeq.map (fun i -> run_experiment ("Experiment destructor_style_ackerman_scheme: " + string i) destructor_style_ackerman_scheme i)
                           |> PSeq.toList
     let consts = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment constructor_style_ackerman_scheme: " + string i) constructor_style_ackerman_scheme i)
                            |> PSeq.toList
@@ -141,6 +139,6 @@ let main argv =
     // Latex code generation
     execute "/usr/local/bin/gnuplot" "AckermanDest500Error.plot" |> ignore
     execute "/usr/local/bin/gnuplot" "AckermanConsts500Error.plot" |> ignore
-    execute "/usr/local/bin/gnuplot" "Ackerman500Cumulative.plot" |> ignore*)
+    execute "/usr/local/bin/gnuplot" "Ackerman500Cumulative.plot" |> ignore
     0 // return an integer exit code
     

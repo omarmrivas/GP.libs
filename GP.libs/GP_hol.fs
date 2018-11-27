@@ -44,8 +44,8 @@ type gp_data =
         scheme : Expr
         vars : Var list
         term_size: int
-        max_term_size : int
-        term_depths: int list
+        delta_size: int
+        term_sizes: int list
         population_size: int
         generations : int
         bests: int
@@ -104,33 +104,37 @@ let statistics (data : gp_data) pool =
     let eq_undetected = Array.length undetected - 
                         Array.length (Array.groupBy (fun (_, i) -> Swensen.Unquote.Operators.decompile i.eta_norm) undetected)
     let best = snd <| Array.maxBy (fun (_, i) -> i.fitness) pool
-    let depths = List.mapi2(fun i e d -> let d' = depth e
-                                         if d' >= d
-                                         then let inc = d' - d + 1
-                                              printfn "Increasing depth for Chromosome %d to %d" i (d + inc)
-                                              d + inc
-                                         else d) best.genome data.term_depths
-
+    let get_sizes best = List.mapi2(fun i e d -> 
+                                        let d' = size e
+                                        if d' + data.delta_size >= d
+                                        then let inc = d' - d + 1
+                                             printfn "Increasing max size for Chromosome %d to %d" i (d + inc)
+                                             d + inc
+                                        else d) best.genome data.term_sizes
+    let sizes = pool |> Array.sortBy (fun (_, i) -> -i.fitness)
+                     |> Array.take data.bests
+                     |> Array.map (get_sizes << snd)
+                     |> Array.fold (List.map2 max) data.term_sizes
 
     let statistic = 
         {
             best_individual = best
             average_fitness = Array.averageBy (fun (_, i) -> i.fitness) pool
             average_size = List.mapi (fun indx _ -> Array.averageBy (fun (_, i) -> (float << size) i.genome.[indx]) pool) 
-                                     data.term_depths
+                                     data.term_sizes
             average_depth = List.mapi (fun indx _ -> Array.averageBy (fun (_, i) -> (float << depth) i.genome.[indx]) pool) 
-                                      data.term_depths
+                                      data.term_sizes
             average_error = Array.averageBy (fun (_, i) -> data.error i.fitness) pool
             equals = eq_detected + eq_undetected
         }
-    {data with term_depths = depths
+    {data with term_sizes = sizes
                statistics = statistic :: data.statistics
                T = if data.memoization
                    then Array.fold (fun T (_, i) -> Map.add (Swensen.Unquote.Operators.decompile i.eta_norm) i T) data.T pool
                    else data.T},
     Array.map snd pool
 
-let get_gp_data memoization par term_size max_term_size term_depth population_size generations bests mutation_prob error timeOut seed loadFile saveFile message scheme =
+let get_gp_data memoization par term_size delta_size population_size generations bests mutation_prob error timeOut seed loadFile saveFile message scheme =
     let count_term = RandomTerms.count_term ()
     let count_terms A s = count_term (A, [], s)
     let tcount (var:Var) = 
@@ -140,7 +144,7 @@ let get_gp_data memoization par term_size max_term_size term_depth population_si
                 |> Array.filter (fun (_, c) -> c > bigint.Zero)
                 |> (fun L -> printfn "Var: %A, counts: %A" var.Name L
                              L)
-    let dcount (var:Var) = term_depth + (List.length << fst << strip_type) var.Type
+    let dcount (var:Var) = term_size + (List.length << fst << strip_type) var.Type
     let rnd = Random(seed)
     let par_data = if par
                    then [| 1 .. population_size |]
@@ -152,8 +156,8 @@ let get_gp_data memoization par term_size max_term_size term_depth population_si
     {scheme = scheme
      vars = vars
      term_size = term_size
-     max_term_size = max_term_size
-     term_depths = List.map dcount vars
+     delta_size = delta_size
+     term_sizes = List.map dcount vars
      generations = generations
      population_size = population_size
      bests = bests
@@ -248,8 +252,8 @@ let initial_population (data : gp_data) : gp_data * individual [] =
         |> statistics data
 //                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
 
-let limit_depth data i s t =
-    if depth t <= data.term_depths.[i]
+let limit_size data i s t =
+    if depth t <= data.term_sizes.[i]
     then t
     else s
 
@@ -283,7 +287,7 @@ let Mutation ((rnd,count_term) : par_data) (data : gp_data) i =
          let (prefix, x, suffix) = select_one indx i
          let x' = clone_expr x
          let x'' = x |> mutation (rnd,count_term) data
-                     |> limit_depth data indx x'
+                     |> limit_size data indx x'
          prefix @ (x'' :: suffix)
     else i
 
@@ -328,7 +332,7 @@ let Crossover (rnd : System.Random) data i i' =
     let (_, t, _) = select_one indx i'
     let s' = clone_expr s
     let x = t |> crossover rnd data s
-              |> limit_depth data indx s'
+              |> limit_size data indx s'
     prefix @ (x :: suffix)
 
 let gp (data : gp_data) : gp_result =
@@ -371,7 +375,7 @@ let gp (data : gp_data) : gp_result =
                                                   d + inc
                                              else d) pool.[0].genome data.term_depths
         let data = {data with term_depths = depths}*)
-        printfn "term_depths: %A" data.term_depths
+        printfn "term_sizes: %A" data.term_sizes
         printfn "Unquoted: %s" (Swensen.Unquote.Operators.decompile pool.[0].eta_norm)
         let bests = Array.take data.bests pool
         let pool' = Array.map (fun i -> (i, i.fitness)) pool
@@ -385,9 +389,9 @@ let gp (data : gp_data) : gp_result =
                                                   //|> tap (fun _ -> printfn "Starting Mutation")
                                                   |> Mutation (rnd,count_term) data
                                                   //|> tap (fun _ -> printfn "ready...")
-                                let i = if List.exists (fun expr -> size expr >= data.max_term_size) i
+(*                                let i = if List.exists (fun expr -> size expr >= data.max_term_size) i
                                         then make_new_ind (rnd,count_term)
-                                        else i
+                                        else i*)
                                 i |> mk_proto_individual data
                                   |> mk_individual data)
         printfn "Elapsed Time: %i sec" (timer.ElapsedMilliseconds / 1000L)
