@@ -37,6 +37,7 @@ type gp_data =
         scheme : Expr
         vars : Var list
         term_size: int
+        max_term_size : int
         delta_size: int
         term_sizes: int list
         population_size: int
@@ -64,6 +65,7 @@ val get_gp_data :
             memoization     : bool ->
             par             : bool ->
             term_size       : int ->
+            max_term_size   : int ->
             delta_size      : int ->
             population_size : int ->
             generations     : int ->

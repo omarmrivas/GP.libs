@@ -28,6 +28,7 @@ type individual =
         fitness: float
     }
 
+[<Serializable>]
 type gp_statistic =
     {
         best_individual : individual
@@ -44,6 +45,7 @@ type gp_data =
         scheme : Expr
         vars : Var list
         term_size: int
+        max_term_size : int
         delta_size: int
         term_sizes: int list
         population_size: int
@@ -103,17 +105,16 @@ let statistics (data : gp_data) pool =
     let undetected = Array.filter (not << fst) pool
     let eq_undetected = Array.length undetected - 
                         Array.length (Array.groupBy (fun (_, i) -> Swensen.Unquote.Operators.decompile i.eta_norm) undetected)
-    let best = snd <| Array.maxBy (fun (_, i) -> i.fitness) pool
+    let best = snd <| Array.minBy (fun (_, i) -> (-i.fitness, List.map size i.genome)) pool
     let get_sizes best = List.mapi2(fun i e d -> 
                                         let d' = size e
-                                        if d' + data.delta_size >= d
-                                        then let inc = d' - d + 1
-                                             printfn "Increasing max size for Chromosome %d to %d" i (d + inc)
-                                             d + inc
+                                        if d' + data.delta_size >= d && d' < data.max_term_size
+                                        then printfn "Increasing max size for Chromosome %d from %d to %d" i d (d' + 1)
+                                             d' + data.delta_size + 1
                                         else d) best.genome data.term_sizes
-    let sizes = pool |> Array.sortBy (fun (_, i) -> -i.fitness)
+    let sizes = pool |> Array.sortBy (fun (_, i) -> (-i.fitness, List.map size i.genome))
                      |> Array.take data.bests
-                     |> Array.filter (fun (_, i) -> i.fitness >= 0.75 * best.fitness)
+                     |> Array.filter (fun (_, i) -> i.fitness >= 0.90 * best.fitness)
                      |> Array.map (get_sizes << snd)
                      |> Array.fold (List.map2 max) data.term_sizes
 
@@ -135,7 +136,7 @@ let statistics (data : gp_data) pool =
                    else data.T},
     Array.map snd pool
 
-let get_gp_data memoization par term_size delta_size population_size generations bests mutation_prob error timeOut seed loadFile saveFile message scheme =
+let get_gp_data memoization par term_size max_term_size delta_size population_size generations bests mutation_prob error timeOut seed loadFile saveFile message scheme =
     let count_term = RandomTerms.count_term ()
     let count_terms A s = count_term (A, [], s)
     let tcount (var:Var) = 
@@ -157,6 +158,7 @@ let get_gp_data memoization par term_size delta_size population_size generations
     {scheme = scheme
      vars = vars
      term_size = term_size
+     max_term_size = max_term_size
      delta_size = delta_size
      term_sizes = List.map dcount vars
      generations = generations
@@ -203,7 +205,7 @@ let serialize (data : gp_data) pool =
     let binarySerializer = FsPickler.CreateBinarySerializer()
     use fileStream = new FileStream(data.save_file, FileMode.Create)
     pool |> Array.map (fun i -> ((Array.map serialize_lambda << List.toArray) i.genome, i.fitness))
-         |> (fun pool -> binarySerializer.Serialize(fileStream, pool))
+         |> (fun pool -> binarySerializer.Serialize(fileStream, (data.statistics,pool)))
 
 let deserialize (data : gp_data) =
     match data.load_file with
@@ -211,8 +213,9 @@ let deserialize (data : gp_data) =
             printfn "Deserializing GP pool"
             let binarySerializer = FsPickler.CreateBinarySerializer()
             use fileStream = new FileStream(load_file, FileMode.Open)
-            binarySerializer.Deserialize<(term [] * float)[]>(fileStream)
-                |> Array.map (fun (lams, fitness) -> 
+            binarySerializer.Deserialize<(gp_statistic list * (term [] * float)[])>(fileStream)
+                |> (fun (statistics, pool) -> 
+                        (statistics,Array.map (fun (lams, fitness) -> 
                                 let lams = (List.map (deserialize_lambda Map.empty) << Array.toList) lams
                                 let eta_norm = Expr.Applications(data.scheme, List.map List.singleton lams)
                                                  |> expand Map.empty
@@ -221,16 +224,18 @@ let deserialize (data : gp_data) =
                                 {genome = lams
                                  eta_norm = eta_norm
                                  norm = norm
-                                 fitness = fitness})
+                                 fitness = fitness}) pool))
       | None -> failwith "Can't deserialize GP pool. Load file not set."
 
 let initial_population (data : gp_data) : gp_data * individual [] =
     if Option.isSome data.load_file &&
        File.Exists( Option.get data.load_file )
     then data |> deserialize
-              |> Array.map (fun i -> (false, i))
-              |> statistics data
-    else 
+              |> (fun (sts, pool) ->
+                    let data = {data with statistics = sts}
+                    pool |> Array.map (fun i -> (false, i))
+                         |> statistics data)
+    else
      data.par_data
         |> Array.mapi (fun i x -> (i, x))
         |> pmap data.par (fun (i, (rnd,count_term)) ->
@@ -254,7 +259,7 @@ let initial_population (data : gp_data) : gp_data * individual [] =
 //                          |> tap (fun _ -> printfn "Elapsed Time: %A sec" (timer.ElapsedMilliseconds / 1000L)))
 
 let limit_size data i s t =
-    if depth t <= data.term_sizes.[i]
+    if size t <= data.term_sizes.[i]
     then t
     else s
 
@@ -353,29 +358,16 @@ let gp (data : gp_data) : gp_result =
     let next_generation data pool =
         let timer = new System.Diagnostics.Stopwatch()
         timer.Start()
-        let pool = Array.sortBy (fun i -> -i.fitness) pool
-        printfn "Best individual: %f" pool.[0].fitness
+        let pool = Array.sortBy (fun i -> (-i.fitness, List.map size i.genome)) pool
+        printfn "Best individual: %f" data.statistics.[0].best_individual.fitness
         printfn "Best individual error: %f" (data.error data.statistics.[0].best_individual.fitness)
         printfn "Best individual statistics:"
         List.iter (fun e -> printfn "size: %i, depth: %i" (size e) (depth e)) pool.[0].genome
-        printfn "Average fitness: %f" data.statistics.[0].average_fitness //(Array.averageBy (fun i -> i.fitness) pool)
+        printfn "Average fitness: %f" data.statistics.[0].average_fitness
         printfn "Average size: "
         List.iteri (fun indx f -> printfn "Indx %i: %f" indx f) data.statistics.[0].average_size
-(*        List.iteri (fun indx _ -> printfn "Indx %i: %f"
-                                          indx
-                                          (Array.averageBy (fun i -> (float << size) i.genome.[indx]) pool)) data.term_depths*)
         printfn "Average depth:"
         List.iteri (fun indx f -> printfn "Indx %i: %f" indx f) data.statistics.[0].average_depth
-(*        List.iteri (fun indx _ -> printfn "Indx %i: %f"
-                                          indx
-                                          (Array.averageBy (fun i -> (float << depth) i.genome.[indx]) pool)) data.term_depths*)
-        (*let depths = List.mapi2(fun i e d -> let d' = depth e
-                                             if d' >= d
-                                             then let inc = d' - d + 1
-                                                  printfn "Increasing depth for Chromosome %d to %d" i (d + inc)
-                                                  d + inc
-                                             else d) pool.[0].genome data.term_depths
-        let data = {data with term_depths = depths}*)
         printfn "term_sizes: %A" data.term_sizes
         printfn "Unquoted: %s" (Swensen.Unquote.Operators.decompile pool.[0].eta_norm)
         let bests = Array.take data.bests pool
@@ -385,29 +377,23 @@ let gp (data : gp_data) : gp_result =
                         |> pmap data.par (fun (rnd,count_term) ->
                                 let i1 = weightRnd_double rnd pool'
                                 let i2 = weightRnd_double rnd pool'
-                                let i = i2.genome //|> tap (fun _ -> printfn "Starting crossover")
-                                                  |> Crossover rnd data i1.genome
-                                                  //|> tap (fun _ -> printfn "Starting Mutation")
+                                let i = i2.genome |> Crossover rnd data i1.genome
                                                   |> Mutation (rnd,count_term) data
-                                                  //|> tap (fun _ -> printfn "ready...")
-(*                                let i = if List.exists (fun expr -> size expr >= data.max_term_size) i
-                                        then make_new_ind (rnd,count_term)
-                                        else i*)
                                 i |> mk_proto_individual data
                                   |> mk_individual data)
         printfn "Elapsed Time: %i sec" (timer.ElapsedMilliseconds / 1000L)
         printfn ""
         statistics data (Array.append (Array.map (fun i -> (false, i)) bests) rest)
-//        (data, Array.append bests rest)
     let rec loop i (data, pool) =
         printfn "%s" data.message
         printfn "Generation: %i" i
         serialize data pool
-        match Array.tryFind (fun i -> data.error i.fitness = 0.0) pool with
-            | Some i -> Solved ({data with statistics = List.rev data.statistics}, i)
-            | None -> if i < data.generations
-                      then loop (i + 1) (next_generation data pool)
-                      else Unsolved data
+        if data.error data.statistics.[0].best_individual.fitness = 0.0
+        then Solved ({data with statistics = List.rev data.statistics},
+                     data.statistics.[0].best_individual)
+        elif i < data.generations
+        then loop (i + 1) (next_generation data pool)
+        else Unsolved data
     printfn "Building initial population..."
     loop 1 (initial_population data)
 

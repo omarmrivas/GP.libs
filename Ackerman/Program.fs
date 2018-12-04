@@ -68,7 +68,8 @@ let run_experiment msg scheme i =
     printfn "Starting experiment %i" i
     let closure = Utils.closure 10 scheme
     let term_size = 21
-    let delta_term = 3
+    let max_term_size = 45
+    let delta_term = 2
     let population_size = 500
     let generations = 500
     let bests = 25
@@ -78,10 +79,10 @@ let run_experiment msg scheme i =
     let seed = Guid.NewGuid().GetHashCode()
     printfn "Random seed: %i" seed
     let loadFile = None
-    let saveFile = "pool.save"
+    let saveFile = "pool" + string i + ".save"
     let par = false
     let memoization = false
-    let data = GP_hol.get_gp_data memoization par term_size delta_term
+    let data = GP_hol.get_gp_data memoization par term_size max_term_size delta_term
                                   population_size generations bests mutation_prob error 
                                   timeOut seed loadFile saveFile msg closure
     GP_hol.gp data
