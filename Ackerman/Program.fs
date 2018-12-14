@@ -64,12 +64,12 @@ let destructor_style_ackerman_scheme =
                                  (f (dec x)) (f x)
          fun () -> fitness f @@>
 
-let run_experiment msg scheme i =
+let get_gp_data msg prefix scheme i =
     printfn "Starting experiment %i" i
     let closure = Utils.closure 10 scheme
-    let term_size = 21
-    let max_term_size = 45
-    let delta_term = 2
+    let term_size = 23
+    let max_term_size = 75
+    let delta_term = 3
     let population_size = 500
     let generations = 500
     let bests = 25
@@ -79,13 +79,37 @@ let run_experiment msg scheme i =
     let seed = Guid.NewGuid().GetHashCode()
     printfn "Random seed: %i" seed
     let loadFile = None
-    let saveFile = "pool" + string i + ".save"
+    let saveFile = prefix + "_pool" + string i + ".save"
     let par = false
     let memoization = false
     let data = GP_hol.get_gp_data memoization par term_size max_term_size delta_term
                                   population_size generations bests mutation_prob error 
                                   timeOut seed loadFile saveFile msg closure
+    data
+
+let run_experiment msg prefix scheme i =
+    let data = get_gp_data msg prefix scheme i
     GP_hol.gp data
+
+let load_experiment msg prefix scheme i =
+    let data = get_gp_data msg prefix scheme i
+    let data = {data with load_file = Some data.save_file}
+    let (sts, pool) = GP_hol.deserialize data
+    List.iteri (fun i sts -> 
+        printfn "Statistics: %i" i
+        printfn "%s" (GP_hol.str_of_statistic sts)) sts
+
+let load_statistics msg prefix scheme i =
+    let data = get_gp_data msg prefix scheme i
+    let data = {data with load_file = Some data.save_file}
+    let (sts, pool) = GP_hol.deserialize data
+    sts
+
+let test_statistics stss =
+    stss
+    |> List.pairwise
+    |> List.exists (fun (s1,s2) -> s1.best_individual.fitness < s2.best_individual.fitness)
+
 
 (*let algo =
     let rec f = fun af x y ->
@@ -126,9 +150,23 @@ let main argv =
 
     printfn "f(): %A" (f ())*)
 
-    let dests = [1 .. 20] |> PSeq.map (fun i -> run_experiment ("Experiment destructor_style_ackerman_scheme: " + string i) destructor_style_ackerman_scheme i)
+    let sts = 
+        [|1..20|]
+        |> Array.Parallel.map (fun i -> load_statistics ("Experiment constructor_style_ackerman_scheme: " + string i) "constructor" constructor_style_ackerman_scheme i)
+        |> Array.tryFind test_statistics
+
+    match sts with
+    | Some sts -> 
+        List.iteri (fun i sts -> 
+            printfn "Statistics: %i" i
+            printfn "%s" (GP_hol.str_of_statistic sts)) sts
+    | None -> printfn "None"
+
+    //load_experiment ("Experiment destructor_style_ackerman_scheme: " + string 5) "destructor" destructor_style_ackerman_scheme 5
+
+    (*let dests = [1 .. 20] |> PSeq.map (fun i -> run_experiment ("Experiment destructor_style_ackerman_scheme: " + string i) "destructor" destructor_style_ackerman_scheme i)
                           |> PSeq.toList
-    let consts = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment constructor_style_ackerman_scheme: " + string i) constructor_style_ackerman_scheme i)
+    let consts = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment constructor_style_ackerman_scheme: " + string i) "constructor" constructor_style_ackerman_scheme i)
                            |> PSeq.toList
     let (eqs1, alleq1) = gp_statistics_to_equals 500 dests
     let (eqs2, alleq2) = gp_statistics_to_equals 500 consts
@@ -140,6 +178,6 @@ let main argv =
     // Latex code generation
     execute "/usr/local/bin/gnuplot" "AckermanDest500Error.plot" |> ignore
     execute "/usr/local/bin/gnuplot" "AckermanConsts500Error.plot" |> ignore
-    execute "/usr/local/bin/gnuplot" "Ackerman500Cumulative.plot" |> ignore
+    execute "/usr/local/bin/gnuplot" "Ackerman500Cumulative.plot" |> ignore*)
     0 // return an integer exit code
     

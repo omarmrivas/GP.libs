@@ -102,13 +102,37 @@ let timeout (time:int) def f v =
           | None -> def
     with e -> def*)
 
+/// The greatest maximum-stack-size that should be used
+/// with the 'runWithStackFrame' function.
+let [<Literal>] STACK_LIMIT = 16777216;;
+
+/// Run a function with a custom maximum stack size.
+/// This is necessary for some functions to execute
+/// without raising a StackOverflowException.
+let runWithCustomStackSize maxStackSize def fn =
+    /// Holds the return value of the function.
+    let result = ref def//Unchecked.defaultof<'T>
+
+    // Create a thread with the specified maximum stack size,
+    // then immediately execute the function on it.
+    let thread = System.Threading.Thread ((fun () -> result := fn()), maxStackSize)
+    thread.Start ()
+
+    // Wait for the function/thread to finish and return the result.
+    thread.Join ()
+    !result;;
+
+/// Runs a function within a thread which has an enlarged maximum-stack-size.
+let inline runWithEnlargedStack def fn =
+    runWithCustomStackSize STACK_LIMIT def fn;;
+
 // Not really useful as it would lead to stack overflows in
 // non-terminating function calls
 let timeout (time:int) def f v =
     try
         let tokenSource = new CancellationTokenSource(time)
         let token = tokenSource.Token
-        let task = Task.Factory.StartNew(fun () -> f v, token)
+        let task = Task.Factory.StartNew(fun () -> runWithEnlargedStack def (fun () -> f v), token)
         if not (task.Wait(time, token))
         then def
         else fst task.Result

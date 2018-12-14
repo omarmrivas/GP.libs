@@ -19,9 +19,10 @@
     <Compile Include="GP_hol.fsi" />
     <Compile Include="GP_hol.fs" />
     <Compile Include="Gnuplot.fs" />
+    <Compile Include="Experiments.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Unquote" Version="4.0.0" />
-    <PackageReference Include="FsPickler" Version="4.0.1" />
+    <PackageReference Include="FsPickler" Version="5.2.0" />
   </ItemGroup>
 </Project>

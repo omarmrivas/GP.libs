@@ -1,0 +1,65 @@
+Equals dest: 
+gp_statistics_to_equals Destructive: (1489, 10000)
+
+Equals consts: 
+gp_statistics_to_equals Constructive: (4130, 10000)
+
+Solutions dest
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else (if List.isEmpty xs then 0 else List.head xs) + f (af - 1) (if List.isEmpty xs then [] else List.tail xs) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.5.0 x.0.0) (x.5.1 (x.6.0 x.0.0))
+Statistics:
+Chromosome: 0 - Size: 15, Depth: 13
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else f (af - 1) (if List.isEmpty xs then [] else List.tail xs) + (if List.isEmpty xs then 0 else List.head xs) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.5.1 (x.6.0 x.0.0)) (x.5.0 x.0.0)
+Statistics:
+Chromosome: 0 - Size: 15, Depth: 14
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else (if List.isEmpty xs then 0 else List.head xs) + (0 + f (af - 1) (if List.isEmpty xs then [] else List.tail xs)) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.5.0 x.0.0) (x.3.0 x.4.0 (x.5.1 (x.6.0 x.0.0)))
+Statistics:
+Chromosome: 0 - Size: 17, Depth: 14
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else 0 + (f (af - 1) (if List.isEmpty xs then [] else List.tail xs) + (if List.isEmpty xs then 0 else List.head xs)) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 x.4.0 (x.3.0 (x.5.1 (x.6.0 x.0.0)) (x.5.0 x.0.0))
+Statistics:
+Chromosome: 0 - Size: 17, Depth: 15
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else 0 + f (af - 1) (if List.isEmpty xs then [] else List.tail xs) + 0 + (if List.isEmpty xs then 0 else List.head xs) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.3.0 (x.3.0 x.4.0 (x.5.1 (x.6.0 x.0.0))) x.4.0) (x.5.0 x.0.0)
+Statistics:
+Chromosome: 0 - Size: 19, Depth: 17
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else f (af - 1) (if List.isEmpty xs then [] else List.tail xs) + (if List.isEmpty xs then 0 else List.head xs) + 0 + 0 in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.3.0 (x.3.0 (x.5.1 (x.6.0 x.0.0)) (x.5.0 x.0.0)) x.4.0) x.4.0
+Statistics:
+Chromosome: 0 - Size: 19, Depth: 18
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else (if List.isEmpty xs then 0 else List.head xs) + (0 + 0 + f (af - 1) (if List.isEmpty xs then [] else List.tail xs)) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.5.0 x.0.0) (x.3.0 (x.3.0 x.4.0 x.4.0) (x.5.1 (x.6.0 x.0.0)))
+Statistics:
+Chromosome: 0 - Size: 19, Depth: 15
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else 0 + (if List.isEmpty xs then 0 else List.head xs) + (0 + f (af - 1) (if List.isEmpty xs then [] else List.tail xs)) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.3.0 x.4.0 (x.5.0 x.0.0)) (x.3.0 x.4.0 (x.5.1 (x.6.0 x.0.0)))
+Statistics:
+Chromosome: 0 - Size: 19, Depth: 14
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else 0 + (if List.isEmpty xs then 0 else List.head xs) + f (af - 1) [] + f (af - 1) (if List.isEmpty xs then [] else List.tail xs) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.3.0 (x.3.0 x.4.0 (x.5.0 x.0.0)) (x.5.1 x.0.1)) (x.5.1 (x.6.0 x.0.0))
+Statistics:
+Chromosome: 0 - Size: 20, Depth: 16
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else (if List.isEmpty xs then 0 else List.head xs) + f (af - 1) [] + (f (af - 1) (if List.isEmpty xs then [] else List.tail xs) + 0) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.3.0 (x.5.0 x.0.0) (x.5.1 x.0.1)) (x.3.0 (x.5.1 (x.6.0 x.0.0)) x.4.0)
+Statistics:
+Chromosome: 0 - Size: 20, Depth: 15
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else f (af - 1) (if List.isEmpty xs then [] else List.tail xs) + 0 + (if List.isEmpty xs then 0 else List.head xs) + (if List.isEmpty [] then 0 else List.head []) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.3.0 (x.3.0 (x.5.1 (x.6.0 x.0.0)) x.4.0) (x.5.0 x.0.0)) (x.5.0 x.0.1)
+Statistics:
+Chromosome: 0 - Size: 20, Depth: 18
+Individual: let rec f = fun af xs -> if af <= 0 then new int() else f (af - 1) (if List.isEmpty xs then [] else List.tail xs) + ((if List.isEmpty (if List.isEmpty [] then [] else List.tail []) then 0 else List.head (if List.isEmpty [] then [] else List.tail [])) + (if List.isEmpty xs then 0 else List.head xs)) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.0.1 x.3.0 x.4.0 x.5.0 x.6.0 x.5.1 -> x.3.0 (x.5.1 (x.6.0 x.0.0)) (x.3.0 (x.5.0 (x.6.0 x.0.1)) (x.5.0 x.0.0))
+Statistics:
+Chromosome: 0 - Size: 19, Depth: 15
+
+Solutions consts
+Individual: let rec f = fun af x -> if af <= 0 then new int() else (if (match x with | _::_ -> true | _ -> false) then f (af - 1) x.Tail + x.Head else 0) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.3.0 -> x.2.0 (x.3.0 x.1.0) x.0.0
+Statistics:
+Chromosome: 0 - Size: 8, Depth: 8
+Individual: let rec f = fun af x -> if af <= 0 then new int() else (if (match x with | _::_ -> true | _ -> false) then x.Head + f (af - 1) x.Tail else 0) in fun () -> Program.fitness (f 10)
+fun x.0.0 x.1.0 x.2.0 x.3.0 -> x.2.0 x.0.0 (x.3.0 x.1.0)
+Statistics:
+Chromosome: 0 - Size: 8, Depth: 7

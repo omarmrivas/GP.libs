@@ -1,13 +1,8 @@
 ﻿// Learn more about F# at http://fsharp.org
 // See the 'F# Tutorial' project for more help.
 
-open Microsoft.FSharp.Quotations
-open Microsoft.FSharp.Quotations.Patterns
-open Microsoft.FSharp.Quotations.DerivedPatterns
-open System
 open Utils
-open GP_hol
-open Gnuplot
+open Experiments
 
 type nat = Cero | Suc of nat
 
@@ -46,7 +41,7 @@ let destructor_style_sum_scheme =
                                                   else List.tail xs) f
          fun () -> fitness f @@>
 
-let run_experiment msg scheme i =
+(*let run_experiment msg scheme i =
     printfn "Starting experiment %i" i
     let closure = Utils.closure 10 scheme
     let term_size = 17
@@ -66,14 +61,18 @@ let run_experiment msg scheme i =
     let data = GP_hol.get_gp_data par term_size max_term_size term_depth population_size 
                                   generations bests mutation_prob error timeOut seed
                                   loadFile saveFile msg closure
-    GP_hol.gp data
+    GP_hol.gp data*)
 
 [<EntryPoint>]
 let main argv =
+//    compare_lambda_terms "Sum" destructor_style_sum_scheme constructor_style_sum_scheme
+
+    run_experiment 23 "Sum" destructor_style_sum_scheme constructor_style_sum_scheme
+
     (*compare_lambda_terms_plot ("Sum" + string 500) "Number of typed $\\\\lambda$-terms for Sum" 40 constructor_style_sum_scheme destructor_style_sum_scheme
     execute "/usr/local/bin/gnuplot" "Sum500LambdaTerms.plot" |> ignore*)
 
-    let dests = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment destructor_style_sum_scheme: " + string i) destructor_style_sum_scheme i)
+    (*let dests = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment destructor_style_sum_scheme: " + string i) destructor_style_sum_scheme i)
     let consts = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment constructor_style_sum_scheme: " + string i) constructor_style_sum_scheme i)
     let (eqs1, alleq1) = gp_statistics_to_equals 500 dests
     let (eqs2, alleq2) = gp_statistics_to_equals 500 consts
@@ -85,6 +84,6 @@ let main argv =
     // Latex code generation
     execute "/usr/local/bin/gnuplot" "SumDest500Error.plot" |> ignore
     execute "/usr/local/bin/gnuplot" "SumConsts500Error.plot" |> ignore
-    execute "/usr/local/bin/gnuplot" "Sum500Cumulative.plot" |> ignore
+    execute "/usr/local/bin/gnuplot" "Sum500Cumulative.plot" |> ignore*)
     0 // return an integer exit code
     

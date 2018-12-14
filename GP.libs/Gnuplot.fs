@@ -29,6 +29,9 @@ let max_generation (sts : gp_result list) =
     sts |> List.maxBy (List.length << (fun data -> data.statistics) << dest_result)
         |> (List.length << (fun data -> data.statistics) << dest_result)
 
+let sort_sts = function
+    | Solved (data, ind) -> Solved ({data with statistics = List.sortBy (fun st -> st.best_individual.fitness) data.statistics}, ind)
+    | Unsolved data -> Unsolved ({data with statistics = List.sortBy (fun st -> st.best_individual.fitness) data.statistics})
 let extract normalize = function
     | Solved (data, ind) -> match data.statistics with
                             | [] -> normalize (data.error ind.fitness)
@@ -45,6 +48,9 @@ let reduce = function
                        | _ :: sts -> Unsolved {data with statistics = sts}
 
 let gp_statistics_to_error_plot file title generations (sts : gp_result list) =
+    // FIXME: it should work without sorting!
+    let sts = List.map sort_sts sts
+    // FIXME: it should work without sorting!
     let merror = max_error sts
     let mgeneration = max_generation sts
     let normalize x = x / merror
@@ -70,7 +76,7 @@ let gp_statistics_to_error_plot file title generations (sts : gp_result list) =
                                    let avg = List.average row
                                    ((float i :: avg :: row) :: R, List.map reduce sts)) ([],sts)
     |> (List.rev << fst)
-    |> List.map ((fun str -> str) << String.concat " " << List.map string)
+    |> List.map (String.concat " " << List.map string)
     |> (fun lines -> File.WriteAllLines(datafile, lines))
 
 let gp_statistics_to_cumulative_prob generations (sts : gp_result list) =
@@ -150,3 +156,15 @@ let gp_statistics_to_equals population_size (sts : gp_result list) =
     let eqs = List.sumBy gp_result_to_equals sts
     let all = List.sumBy processed sts
     (eqs, all)
+
+let gp_solutions (sts : gp_result list) =
+    let solutions = function
+        | Solved (_, ind) -> Some ind
+        | Unsolved _ -> None
+    let algo = Map
+    sts
+    |> List.choose solutions
+    |> List.map (fun i -> (Swensen.Unquote.Operators.decompile i.eta_norm, i))
+    |> (fun s -> Map(s))
+    |> Map.toList
+

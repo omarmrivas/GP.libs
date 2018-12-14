@@ -2,7 +2,7 @@ set terminal epslatex color
 set output "AckermanConsts500Error.tex"
 set format xy "$%g$"
 set title "(e) Best-of-generation error for Ackerman (constructive)"
-set xrange [0.0:23]
+set xrange [0.0:27]
 set yrange [0.0:1.0]
 set xlabel "Generation"
 set ylabel "Minimum error"

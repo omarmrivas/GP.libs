@@ -5,6 +5,7 @@ open System
 open Utils
 open GP_hol
 open Gnuplot
+open Experiments
 
 type nat = Zero | Suc of nat
 
@@ -58,7 +59,7 @@ let destructor_style_mul_scheme =
                                  (fun x y (z : nat) -> if x then y else z) (f y) (g (dec x))
          fun () -> fitness g @@>
 
-let run_experiment msg scheme i =
+(*let run_experiment msg scheme i =
     printfn "Starting experiment %i" i
     let closure = Utils.closure 6 scheme
     let term_size = 18
@@ -77,15 +78,16 @@ let run_experiment msg scheme i =
     let data = GP_hol.get_gp_data term_size max_term_size term_depth population_size generations
                                   bests mutation_prob error timeOut seed
                                   loadFile saveFile msg closure
-    GP_hol.gp data
+    GP_hol.gp data*)
 
 [<EntryPoint>]
 let main argv =
-    (*compare_lambda_terms_plot ("Mul" + string 500) "Number of typed $\\\\lambda$-terms for Mul" 40 constructor_style_mul_scheme destructor_style_mul_scheme
-    execute "/usr/local/bin/gnuplot" "Mul500LambdaTerms.plot" |> ignore*)
+    //compare_lambda_terms "Mul" destructor_style_mul_scheme constructor_style_mul_scheme
 
-    let dests = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment destructor_style_mul_scheme: " + string i) destructor_style_mul_scheme i)
-    let consts = [1 .. 20] |> List.map (fun i -> run_experiment ("Experiment constructor_style_mul_scheme: " + string i) constructor_style_mul_scheme i)
+    run_experiment 21 "Mul" destructor_style_mul_scheme constructor_style_mul_scheme
+
+    (*let dests = [1 .. 20] |> List.map (GP_hol.gp << Experiments.get_gp_data "Experiment destructor_style_mul_scheme: " "destructor" destructor_style_mul_scheme)
+    let consts = [1 .. 20] |> List.map (GP_hol.gp << Experiments.get_gp_data "Experiment constructor_style_mul_scheme: " "constructor" constructor_style_mul_scheme)
     let (eqs1, alleq1) = gp_statistics_to_equals 500 dests
     let (eqs2, alleq2) = gp_statistics_to_equals 500 consts
     printfn "gp_statistics_to_equals Destructive: (%i, %i)" eqs1 alleq1
@@ -96,6 +98,6 @@ let main argv =
     // Latex code generation
     execute "/usr/local/bin/gnuplot" "MulDest500Error.plot" |> ignore
     execute "/usr/local/bin/gnuplot" "MulConsts500Error.plot" |> ignore
-    execute "/usr/local/bin/gnuplot" "Mul500Cumulative.plot" |> ignore
+    execute "/usr/local/bin/gnuplot" "Mul500Cumulative.plot" |> ignore*)
     0 // return an integer exit code
         

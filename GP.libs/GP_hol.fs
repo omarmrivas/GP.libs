@@ -99,6 +99,21 @@ let memoize fn =
                   cache.[x] <- v
                   v)
 
+let str_of_statistic sts =
+    sprintf "Best individual: %s\nBest individual fitness: %A\nAverage size: %A\nAverage depth: %A\nAverage fitness: %A"
+            (Swensen.Unquote.Operators.decompile sts.best_individual.eta_norm)
+            sts.best_individual.fitness
+            sts.average_size
+            sts.average_depth
+            sts.average_fitness
+
+let str_of_individual i =
+    ("Individual: " + Swensen.Unquote.Operators.decompile i.eta_norm)
+    :: (List.map Swensen.Unquote.Operators.decompile i.genome)
+    @ ["Statistics:"]
+    @ List.mapi (fun i e -> sprintf "Chromosome: %i - Size: %i, Depth: %i" i (size e) (depth e)) i.genome
+    |> String.concat "\n"
+
 let statistics (data : gp_data) pool =
     let eq_detected = Array.sumBy (function (true, _) -> 1
                                           | (false, _) -> 0) pool
@@ -106,6 +121,9 @@ let statistics (data : gp_data) pool =
     let eq_undetected = Array.length undetected - 
                         Array.length (Array.groupBy (fun (_, i) -> Swensen.Unquote.Operators.decompile i.eta_norm) undetected)
     let best = snd <| Array.minBy (fun (_, i) -> (-i.fitness, List.map size i.genome)) pool
+    if List.exists (fun (sts : gp_statistic) -> best.fitness < sts.best_individual.fitness) data.statistics
+    then printfn "Error en la selección del mejor"
+    else ()
     let get_sizes best = List.mapi2(fun i e d -> 
                                         let d' = size e
                                         if d' + data.delta_size >= d && d' < data.max_term_size
@@ -362,14 +380,14 @@ let gp (data : gp_data) : gp_result =
         printfn "Best individual: %f" data.statistics.[0].best_individual.fitness
         printfn "Best individual error: %f" (data.error data.statistics.[0].best_individual.fitness)
         printfn "Best individual statistics:"
-        List.iter (fun e -> printfn "size: %i, depth: %i" (size e) (depth e)) pool.[0].genome
+        List.iter (fun e -> printfn "size: %i, depth: %i" (size e) (depth e)) data.statistics.[0].best_individual.genome
         printfn "Average fitness: %f" data.statistics.[0].average_fitness
         printfn "Average size: "
         List.iteri (fun indx f -> printfn "Indx %i: %f" indx f) data.statistics.[0].average_size
         printfn "Average depth:"
         List.iteri (fun indx f -> printfn "Indx %i: %f" indx f) data.statistics.[0].average_depth
         printfn "term_sizes: %A" data.term_sizes
-        printfn "Unquoted: %s" (Swensen.Unquote.Operators.decompile pool.[0].eta_norm)
+        printfn "Unquoted: %s" (Swensen.Unquote.Operators.decompile data.statistics.[0].best_individual.eta_norm)
         let bests = Array.take data.bests pool
         let pool' = Array.map (fun i -> (i, i.fitness)) pool
         let rest = data.par_data

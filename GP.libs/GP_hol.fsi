@@ -21,6 +21,7 @@ type individual =
      norm: Expr
      fitness: float}
 
+[<Serializable>]
 type gp_statistic =
     {
         best_individual : individual
@@ -80,8 +81,19 @@ val get_gp_data :
             scheme          : Expr
                            -> gp_data
 
+val deserialize :
+            data    : gp_data ->
+            gp_statistic list * individual []
+
+val str_of_statistic :
+            sts     : gp_statistic
+                   -> string
+
 val gp : data  : gp_data
               -> gp_result
+
+val str_of_individual : individual
+                     -> string
 
 val num_lambda_terms : par    : bool ->
                        size   : int ->
